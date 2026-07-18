@@ -60,6 +60,7 @@ model User {
   branch Branch?  @relation(fields: [branchId], references: [id])
   bookingsAsAgent Booking[]
   remarksCreated  Remark[]
+  workflowTransitionsAsActor WorkflowTransition[]
 
   @@index([tenantId])
   @@index([tenantId, role])
@@ -251,6 +252,7 @@ model Booking {
   fares      Fare[]
   tickets    Ticket[]
   remarks    Remark[]
+  workflowTransitions WorkflowTransition[]
 
   @@unique([tenantId, bookingReference])
   @@index([tenantId])
@@ -416,4 +418,23 @@ model Remark {
 
   @@index([bookingId])
   @@map("remarks")
+}
+
+// The Workflow Engine's audit trail (MASTER.md §5, DATABASE.md §3.14) — immutable: no
+// updatedAt, no deletedAt, rows are never modified or removed once written.
+model WorkflowTransition {
+  id        String        @id @default(uuid()) @db.Uuid
+  bookingId String        @map("booking_id") @db.Uuid
+  fromStage BookingStatus? @map("from_stage")
+  toStage   BookingStatus  @map("to_stage")
+  actorId   String?       @map("actor_id") @db.Uuid
+  reason    String?       @db.Text
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+  actor   User?   @relation(fields: [actorId], references: [id])
+
+  @@index([bookingId])
+  @@index([bookingId, createdAt])
+  @@map("workflow_transitions")
 }
