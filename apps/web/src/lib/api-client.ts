@@ -115,3 +115,61 @@ export function updateSettings(
     body: JSON.stringify(data),
   });
 }
+
+export interface BranchResponse {
+  id: string;
+  agencyId: string;
+  name: string;
+  code: string;
+  addressLine1: string | null;
+  cityId: string | null;
+  countryId: string | null;
+  phone: string | null;
+  email: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateBranchInput = Pick<BranchResponse, 'name' | 'code'> &
+  Partial<Pick<BranchResponse, 'addressLine1' | 'phone' | 'email'>>;
+
+export type UpdateBranchInput = Partial<
+  Pick<BranchResponse, 'name' | 'code' | 'addressLine1' | 'phone' | 'email' | 'isActive'>
+>;
+
+export function listBranches(accessToken: string): Promise<BranchResponse[]> {
+  return request<BranchResponse[]>('/api/v1/branches', {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function createBranch(
+  accessToken: string,
+  data: CreateBranchInput,
+): Promise<BranchResponse> {
+  return request<BranchResponse>('/api/v1/branches', {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateBranch(
+  accessToken: string,
+  id: string,
+  data: UpdateBranchInput,
+): Promise<BranchResponse> {
+  return request<BranchResponse>(`/api/v1/branches/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteBranch(accessToken: string, id: string): Promise<void> {
+  return request<void>(`/api/v1/branches/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(accessToken),
+  });
+}
