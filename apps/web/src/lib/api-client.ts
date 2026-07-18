@@ -228,3 +228,34 @@ export function updateUser(
     body: JSON.stringify(data),
   });
 }
+
+export type UpdateMyProfileInput = Partial<Pick<UserResponse, 'fullName' | 'phone'>>;
+
+export function getMe(accessToken: string): Promise<UserResponse> {
+  return request<UserResponse>('/api/v1/me', {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function updateMe(
+  accessToken: string,
+  data: UpdateMyProfileInput,
+): Promise<UserResponse> {
+  return request<UserResponse>('/api/v1/me', {
+    method: 'PATCH',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
+
+export function changeMyPassword(
+  accessToken: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  return request<void>('/api/v1/me/password', {
+    method: 'PATCH',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}

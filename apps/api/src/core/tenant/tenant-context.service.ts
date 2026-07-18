@@ -35,6 +35,14 @@ export class TenantContextService {
     return this.getContext().userId;
   }
 
+  requireUserId(): string {
+    const userId = this.getUserId();
+    if (!userId) {
+      throw new Error('User context is not established for this request');
+    }
+    return userId;
+  }
+
   getRole(): string | undefined {
     return this.getContext().role;
   }

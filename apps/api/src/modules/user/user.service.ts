@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
@@ -102,5 +103,24 @@ export class UserService {
 
   async remove(id: string): Promise<void> {
     await this.userRepository.delete(id);
+  }
+
+  // Owned by User (Clean Architecture, CODING_STANDARDS §3) so My Profile (T21) reaches
+  // password data only through this Service, never the Repository directly.
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = (await this.userRepository.findById(userId)) as User | null;
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const matches = await this.hashService.verify(currentPassword, user.passwordHash);
+    if (!matches) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    const passwordHash = await this.hashService.hash(newPassword);
+    await this.userRepository.update(userId, { passwordHash });
   }
 }
