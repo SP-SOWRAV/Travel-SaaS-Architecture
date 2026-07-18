@@ -1,6 +1,8 @@
 export interface EnvironmentVariables {
   DATABASE_URL: string;
   PORT: number;
+  JWT_SECRET: string;
+  JWT_EXPIRES_IN: string;
 }
 
 /**
@@ -28,6 +30,16 @@ export function validate(config: Record<string, unknown>): EnvironmentVariables 
     }
   }
 
+  const jwtSecret = config.JWT_SECRET;
+  if (typeof jwtSecret !== 'string' || jwtSecret.trim().length < 32) {
+    errors.push('JWT_SECRET is required and must be at least 32 characters long');
+  }
+
+  const jwtExpiresIn =
+    typeof config.JWT_EXPIRES_IN === 'string' && config.JWT_EXPIRES_IN.trim() !== ''
+      ? config.JWT_EXPIRES_IN
+      : '1h';
+
   if (errors.length > 0) {
     throw new Error(`Invalid environment configuration:\n- ${errors.join('\n- ')}`);
   }
@@ -35,5 +47,7 @@ export function validate(config: Record<string, unknown>): EnvironmentVariables 
   return {
     DATABASE_URL: databaseUrl as string,
     PORT: port,
+    JWT_SECRET: jwtSecret as string,
+    JWT_EXPIRES_IN: jwtExpiresIn,
   };
 }
