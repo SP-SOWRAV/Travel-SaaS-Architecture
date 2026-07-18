@@ -4,6 +4,25 @@ import { BaseRepository } from '../../../core/repository/base.repository';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { TenantContextService } from '../../../core/tenant/tenant-context.service';
 
+export interface AggregateFareInput {
+  passengerIndex: number;
+  sectorIndex: number;
+  baseAmount: number;
+  taxes: { taxCode: string; description?: string; amount: number }[];
+}
+
+export interface AggregateBookingInput {
+  bookingReference: string;
+  customerId: string;
+  branchId: string;
+  agentId: string;
+  currencyCode: string;
+  totalAmount: number;
+  passengers: Record<string, unknown>[];
+  sectors: Record<string, unknown>[];
+  fares: AggregateFareInput[];
+}
+
 // Owns Booking and its direct sub-entities (Passenger, Sector, Fare, Tax, Ticket, Remarks)
 // as one aggregate (CODING_STANDARDS §4) — they're always read/written together, and none
 // carry their own tenant_id (DATABASE.md §3.8+), so tenant safety flows from verifying the
@@ -12,9 +31,90 @@ import { TenantContextService } from '../../../core/tenant/tenant-context.servic
 export class BookingRepository extends BaseRepository<Prisma.BookingDelegate> {
   constructor(
     private readonly prisma: PrismaService,
-    tenantContext: TenantContextService,
+    private readonly tenantCtx: TenantContextService,
   ) {
-    super(prisma.booking, tenantContext, true);
+    super(prisma.booking, tenantCtx, true);
+  }
+
+  // T32: creates the Booking plus every nested Passenger/Sector/Fare/Tax in one DB
+  // transaction — any failure (bad FK, invalid index reference) throws and Prisma rolls
+  // back everything created so far in this call.
+  async createAggregate(input: AggregateBookingInput) {
+    const tenantId = this.tenantCtx.requireTenantId();
+
+    const bookingId = await this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.create({
+        data: {
+          tenantId,
+          bookingReference: input.bookingReference,
+          customerId: input.customerId,
+          branchId: input.branchId,
+          agentId: input.agentId,
+          currencyCode: input.currencyCode,
+          totalAmount: input.totalAmount,
+        },
+      });
+
+      const passengers = [];
+      for (const passengerData of input.passengers) {
+        passengers.push(
+          await tx.passenger.create({
+            data: { ...passengerData, bookingId: booking.id } as Prisma.PassengerUncheckedCreateInput,
+          }),
+        );
+      }
+
+      const sectors = [];
+      for (const sectorData of input.sectors) {
+        sectors.push(
+          await tx.sector.create({
+            data: { ...sectorData, bookingId: booking.id } as Prisma.SectorUncheckedCreateInput,
+          }),
+        );
+      }
+
+      for (const fareInput of input.fares) {
+        const passenger = passengers[fareInput.passengerIndex];
+        const sector = sectors[fareInput.sectorIndex];
+        if (!passenger || !sector) {
+          throw new Error('INVALID_FARE_INDEX_REFERENCE');
+        }
+        const fare = await tx.fare.create({
+          data: {
+            bookingId: booking.id,
+            passengerId: passenger.id,
+            sectorId: sector.id,
+            baseAmount: fareInput.baseAmount,
+            currencyCode: input.currencyCode,
+          },
+        });
+        for (const taxInput of fareInput.taxes) {
+          await tx.tax.create({
+            data: {
+              fareId: fare.id,
+              taxCode: taxInput.taxCode,
+              description: taxInput.description,
+              amount: taxInput.amount,
+            },
+          });
+        }
+      }
+
+      return booking.id;
+    });
+
+    return this.findBookingWithRelations(bookingId);
+  }
+
+  findBookingWithRelations(bookingId: string) {
+    return this.prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        passengers: true,
+        sectors: true,
+        fares: { include: { taxes: true } },
+      },
+    });
   }
 
   findPassengers(bookingId: string) {
