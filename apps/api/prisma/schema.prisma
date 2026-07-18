@@ -189,6 +189,8 @@ model Airport {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   city City @relation(fields: [cityId], references: [id])
+  sectorsAsOrigin      Sector[] @relation("SectorOriginAirport")
+  sectorsAsDestination Sector[] @relation("SectorDestinationAirport")
 
   @@index([cityId])
   @@index([icaoCode])
@@ -203,6 +205,8 @@ model Airline {
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  sectors Sector[]
 
   @@index([name])
   @@map("airlines")
@@ -242,6 +246,7 @@ model Booking {
   branch     Branch      @relation(fields: [branchId], references: [id])
   agent      User        @relation(fields: [agentId], references: [id])
   passengers Passenger[]
+  sectors    Sector[]
 
   @@unique([tenantId, bookingReference])
   @@index([tenantId])
@@ -278,4 +283,39 @@ model Passenger {
 
   @@index([bookingId])
   @@map("passengers")
+}
+
+enum CabinClass {
+  economy
+  premium_economy
+  business
+  first
+
+  @@map("cabin_class")
+}
+
+model Sector {
+  id                   String     @id @default(uuid()) @db.Uuid
+  bookingId            String     @map("booking_id") @db.Uuid
+  airlineId            String     @map("airline_id") @db.Uuid
+  originAirportId      String     @map("origin_airport_id") @db.Uuid
+  destinationAirportId String     @map("destination_airport_id") @db.Uuid
+  flightNumber         String     @map("flight_number") @db.VarChar(10)
+  cabinClass           CabinClass @default(economy) @map("cabin_class")
+  departureAt          DateTime   @map("departure_at") @db.Timestamptz
+  arrivalAt            DateTime   @map("arrival_at") @db.Timestamptz
+  sequenceNumber       Int        @default(1) @map("sequence_number") @db.SmallInt
+  createdAt            DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  booking            Booking @relation(fields: [bookingId], references: [id])
+  airline            Airline @relation(fields: [airlineId], references: [id])
+  originAirport      Airport @relation("SectorOriginAirport", fields: [originAirportId], references: [id])
+  destinationAirport Airport @relation("SectorDestinationAirport", fields: [destinationAirportId], references: [id])
+
+  @@index([bookingId])
+  @@index([airlineId])
+  @@index([originAirportId])
+  @@index([destinationAirportId])
+  @@map("sectors")
 }

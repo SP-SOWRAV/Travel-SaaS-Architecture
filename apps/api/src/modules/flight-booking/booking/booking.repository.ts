@@ -41,4 +41,32 @@ export class BookingRepository extends BaseRepository<Prisma.BookingDelegate> {
   deletePassenger(passengerId: string) {
     return this.prisma.passenger.delete({ where: { id: passengerId } });
   }
+
+  findSectors(bookingId: string) {
+    return this.prisma.sector.findMany({
+      where: { bookingId },
+      orderBy: { sequenceNumber: 'asc' },
+    });
+  }
+
+  findSectorById(bookingId: string, sectorId: string) {
+    return this.prisma.sector.findFirst({ where: { id: sectorId, bookingId } });
+  }
+
+  createSector(bookingId: string, data: Record<string, unknown>) {
+    return this.prisma.sector.create({
+      data: { ...data, bookingId } as Prisma.SectorUncheckedCreateInput,
+    });
+  }
+
+  updateSector(sectorId: string, data: Record<string, unknown>) {
+    return this.prisma.sector.update({
+      where: { id: sectorId },
+      data: data as Prisma.SectorUpdateInput,
+    });
+  }
+
+  deleteSector(sectorId: string) {
+    return this.prisma.sector.delete({ where: { id: sectorId } });
+  }
 }
