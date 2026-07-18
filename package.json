@@ -11,9 +11,10 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "build:shared-types": "npm run build --workspace=packages/shared-types",
     "dev:api": "npm run start:dev --workspace=apps/api",
-    "build:api": "npm run build --workspace=apps/api",
+    "build:api": "npm run build:shared-types && npm run build --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
-    "build:web": "npm run build --workspace=apps/web"
+    "build:web": "npm run build:shared-types && npm run build --workspace=apps/web"
   }
 }

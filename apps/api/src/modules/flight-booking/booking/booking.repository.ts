@@ -240,6 +240,14 @@ export class BookingRepository extends BaseRepository<Prisma.BookingDelegate> {
     return this.prisma.ticket.create({ data: { bookingId, passengerId } });
   }
 
+  // T39: populates the placeholder (T33) with a real number on the Issue Ticket transition.
+  issueTicket(ticketId: string, ticketNumber: string) {
+    return this.prisma.ticket.update({
+      where: { id: ticketId },
+      data: { ticketNumber, status: 'issued', issuedAt: new Date() },
+    });
+  }
+
   findRemarks(bookingId: string) {
     return this.prisma.remark.findMany({ where: { bookingId }, orderBy: { createdAt: 'asc' } });
   }
