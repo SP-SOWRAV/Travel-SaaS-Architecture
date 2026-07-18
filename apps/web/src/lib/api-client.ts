@@ -173,3 +173,58 @@ export function deleteBranch(accessToken: string, id: string): Promise<void> {
     headers: authHeaders(accessToken),
   });
 }
+
+export type StaffRole = 'agency_admin' | 'branch_manager' | 'agent';
+
+export interface UserResponse {
+  id: string;
+  agencyId: string | null;
+  branchId: string | null;
+  email: string;
+  fullName: string;
+  role: StaffRole;
+  phone: string | null;
+  isActive: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUserInput {
+  email: string;
+  password: string;
+  fullName: string;
+  role: StaffRole;
+  branchId?: string;
+  phone?: string;
+}
+
+export type UpdateUserInput = Partial<
+  Pick<UserResponse, 'fullName' | 'role' | 'branchId' | 'phone' | 'isActive'>
+>;
+
+export function listUsers(accessToken: string): Promise<UserResponse[]> {
+  return request<UserResponse[]>('/api/v1/users', {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function createUser(accessToken: string, data: CreateUserInput): Promise<UserResponse> {
+  return request<UserResponse>('/api/v1/users', {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateUser(
+  accessToken: string,
+  id: string,
+  data: UpdateUserInput,
+): Promise<UserResponse> {
+  return request<UserResponse>(`/api/v1/users/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
