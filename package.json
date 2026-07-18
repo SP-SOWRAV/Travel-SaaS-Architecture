@@ -1,0 +1,19 @@
+{
+  "name": "ota-saas-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "OTA SaaS Management Platform - multi-tenant travel agency management system",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev:api": "npm run start:dev --workspace=apps/api",
+    "build:api": "npm run build --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build:web": "npm run build --workspace=apps/web"
+  }
+}

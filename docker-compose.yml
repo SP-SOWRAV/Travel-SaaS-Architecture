@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ota-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-ota_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ota_password}
+      POSTGRES_DB: ${DB_NAME:-ota_saas_dev}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
