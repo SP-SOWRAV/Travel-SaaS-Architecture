@@ -23,7 +23,8 @@ model Agency {
   updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime?    @map("deleted_at") @db.Timestamptz
 
-  users User[]
+  users    User[]
+  settings Settings?
 
   @@map("agencies")
 }
@@ -56,4 +57,37 @@ model User {
   @@index([tenantId])
   @@index([tenantId, role])
   @@map("users")
+}
+
+enum SettingsTheme {
+  light
+  dark
+  system
+
+  @@map("settings_theme")
+}
+
+model Settings {
+  id            String        @id @default(uuid()) @db.Uuid
+  tenantId      String        @unique @map("tenant_id") @db.Uuid
+  legalName     String?       @map("legal_name") @db.VarChar(255)
+  logoUrl       String?       @map("logo_url") @db.VarChar(500)
+  theme         SettingsTheme @default(system)
+  currencyCode  String        @default("USD") @map("currency_code") @db.Char(3)
+  timezone      String        @default("UTC") @db.VarChar(64)
+  invoicePrefix String        @default("INV-") @map("invoice_prefix") @db.VarChar(10)
+  ticketPrefix  String        @default("TKT-") @map("ticket_prefix") @db.VarChar(10)
+  contactEmail  String?       @map("contact_email") @db.VarChar(255)
+  contactPhone  String?       @map("contact_phone") @db.VarChar(30)
+  addressLine1  String?       @map("address_line1") @db.VarChar(255)
+  addressLine2  String?       @map("address_line2") @db.VarChar(255)
+  cityId        String?       @map("city_id") @db.Uuid
+  countryId     String?       @map("country_id") @db.Uuid
+  postalCode    String?       @map("postal_code") @db.VarChar(20)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  agency Agency @relation(fields: [tenantId], references: [id])
+
+  @@map("settings")
 }
