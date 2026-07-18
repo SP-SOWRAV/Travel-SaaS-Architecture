@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { TenantContextService } from '../tenant/tenant-context.service';
 
 type WhereRecord = Record<string, unknown>;
@@ -20,10 +21,14 @@ export abstract class BaseRepository<TDelegate extends TenantScopedDelegate> {
   protected constructor(
     protected readonly delegate: TDelegate,
     private readonly tenantContext: TenantContextService,
+    // Opt-in per DATABASE.md §4/§5: only models with a deletedAt column (e.g. Branch) pass
+    // true. Settings and other non-soft-deletable models keep today's behavior untouched.
+    private readonly softDelete: boolean = false,
   ) {}
 
   private scopedWhere(where: WhereRecord = {}): WhereRecord {
-    return { ...where, tenantId: this.tenantContext.requireTenantId() };
+    const scoped = { ...where, tenantId: this.tenantContext.requireTenantId() };
+    return this.softDelete ? { ...scoped, deletedAt: null } : scoped;
   }
 
   findMany(args: { where?: WhereRecord; [key: string]: unknown } = {}) {
@@ -55,13 +60,18 @@ export abstract class BaseRepository<TDelegate extends TenantScopedDelegate> {
 
   async delete(id: string) {
     await this.assertBelongsToTenant(id);
+    if (this.softDelete) {
+      return this.delegate.update({ where: { id }, data: { deletedAt: new Date() } });
+    }
     return this.delegate.delete({ where: { id } });
   }
 
+  // Cross-tenant access must read as "doesn't exist" (API_RULES §4/§20) — a plain Error
+  // here would otherwise surface as an uncaught 500, not the required 404.
   private async assertBelongsToTenant(id: string): Promise<void> {
     const existing = await this.delegate.findFirst({ where: this.scopedWhere({ id }) });
     if (!existing) {
-      throw new Error('Record not found in tenant scope');
+      throw new NotFoundException('Record not found');
     }
   }
 }

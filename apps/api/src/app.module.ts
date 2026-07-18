@@ -9,6 +9,7 @@ import { TenantContextMiddleware } from './core/tenant/tenant-context.middleware
 import { HealthController } from './modules/health/health.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { BranchModule } from './modules/branch/branch.module';
 
 export type _SharedTypesImportCheck = SharedTypesPlaceholder;
 
@@ -18,6 +19,7 @@ export type _SharedTypesImportCheck = SharedTypesPlaceholder;
     CoreModule,
     AuthModule,
     SettingsModule,
+    BranchModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

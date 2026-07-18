@@ -25,6 +25,7 @@ model Agency {
 
   users    User[]
   settings Settings?
+  branches Branch[]
 
   @@map("agencies")
 }
@@ -90,4 +91,26 @@ model Settings {
   agency Agency @relation(fields: [tenantId], references: [id])
 
   @@map("settings")
+}
+
+model Branch {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  name         String    @db.VarChar(255)
+  code         String    @db.VarChar(20)
+  addressLine1 String?   @map("address_line1") @db.VarChar(255)
+  cityId       String?   @map("city_id") @db.Uuid
+  countryId    String?   @map("country_id") @db.Uuid
+  phone        String?   @db.VarChar(30)
+  email        String?   @db.VarChar(255)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  agency Agency @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("branches")
 }
