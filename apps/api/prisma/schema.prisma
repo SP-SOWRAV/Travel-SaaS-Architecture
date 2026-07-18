@@ -237,10 +237,11 @@ model Booking {
   updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt        DateTime?     @map("deleted_at") @db.Timestamptz
 
-  agency   Agency   @relation(fields: [tenantId], references: [id])
-  customer Customer @relation(fields: [customerId], references: [id])
-  branch   Branch   @relation(fields: [branchId], references: [id])
-  agent    User     @relation(fields: [agentId], references: [id])
+  agency     Agency      @relation(fields: [tenantId], references: [id])
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  agent      User        @relation(fields: [agentId], references: [id])
+  passengers Passenger[]
 
   @@unique([tenantId, bookingReference])
   @@index([tenantId])
@@ -248,4 +249,33 @@ model Booking {
   @@index([tenantId, customerId])
   @@index([tenantId, createdAt])
   @@map("bookings")
+}
+
+// No tenant_id column directly (DATABASE.md §3.8) — always reached through booking_id;
+// tenant scoping comes from verifying the parent Booking first (CODING_STANDARDS §4:
+// BookingRepository owns Passenger/Sector/Fare/Tax/Ticket/Remarks as one aggregate).
+enum PassengerType {
+  ADT
+  CHD
+  INF
+
+  @@map("passenger_type")
+}
+
+model Passenger {
+  id                   String        @id @default(uuid()) @db.Uuid
+  bookingId            String        @map("booking_id") @db.Uuid
+  firstName            String        @map("first_name") @db.VarChar(100)
+  lastName             String        @map("last_name") @db.VarChar(100)
+  dateOfBirth          DateTime?     @map("date_of_birth") @db.Date
+  passportNumber       String?       @map("passport_number") @db.VarChar(50)
+  passengerType        PassengerType @default(ADT) @map("passenger_type")
+  nationalityCountryId String?       @map("nationality_country_id") @db.Uuid
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+  @@map("passengers")
 }
