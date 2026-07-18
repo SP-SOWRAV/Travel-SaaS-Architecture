@@ -140,3 +140,35 @@ model Customer {
   @@index([tenantId, phone])
   @@map("customers")
 }
+
+// Global reference data (MASTER.md §4, DATABASE.md §3.6): no tenant_id, no deletedAt —
+// seeded once by the platform, shared read-only across every Agency, retired via isActive.
+model Country {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(100)
+  isoCode   String   @unique @map("iso_code") @db.Char(2)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  cities City[]
+
+  @@index([name])
+  @@map("countries")
+}
+
+model City {
+  id        String   @id @default(uuid()) @db.Uuid
+  countryId String   @map("country_id") @db.Uuid
+  name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  country Country @relation(fields: [countryId], references: [id])
+
+  @@unique([countryId, name])
+  @@index([countryId])
+  @@index([name])
+  @@map("cities")
+}
