@@ -166,9 +166,27 @@ model City {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   country Country @relation(fields: [countryId], references: [id])
+  airports Airport[]
 
   @@unique([countryId, name])
   @@index([countryId])
   @@index([name])
   @@map("cities")
+}
+
+model Airport {
+  id        String   @id @default(uuid()) @db.Uuid
+  cityId    String   @map("city_id") @db.Uuid
+  iataCode  String   @unique @map("iata_code") @db.Char(3)
+  icaoCode  String?  @map("icao_code") @db.Char(4)
+  name      String   @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  city City @relation(fields: [cityId], references: [id])
+
+  @@index([cityId])
+  @@index([icaoCode])
+  @@map("airports")
 }

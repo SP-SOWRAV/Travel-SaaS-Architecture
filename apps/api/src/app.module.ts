@@ -13,6 +13,7 @@ import { BranchModule } from './modules/branch/branch.module';
 import { UserModule } from './modules/user/user.module';
 import { MyProfileModule } from './modules/my-profile/my-profile.module';
 import { CustomerModule } from './modules/customer/customer.module';
+import { AirportModule } from './modules/airport/airport.module';
 
 export type _SharedTypesImportCheck = SharedTypesPlaceholder;
 
@@ -26,6 +27,7 @@ export type _SharedTypesImportCheck = SharedTypesPlaceholder;
     UserModule,
     MyProfileModule,
     CustomerModule,
+    AirportModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
