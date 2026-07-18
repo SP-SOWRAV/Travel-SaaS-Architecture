@@ -310,3 +310,36 @@ export function updateCustomer(
     body: JSON.stringify(data),
   });
 }
+
+export interface AirlineResponse {
+  id: string;
+  iataCode: string;
+  icaoCode: string | null;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function listAirlines(accessToken: string): Promise<AirlineResponse[]> {
+  return request<AirlineResponse[]>('/api/v1/airlines', {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export interface AirportResponse {
+  id: string;
+  cityId: string;
+  iataCode: string;
+  icaoCode: string | null;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function listAirports(accessToken: string): Promise<AirportResponse[]> {
+  return request<AirportResponse[]>('/api/v1/airports', {
+    headers: authHeaders(accessToken),
+  });
+}
