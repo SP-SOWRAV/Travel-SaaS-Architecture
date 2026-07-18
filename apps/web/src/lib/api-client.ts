@@ -451,3 +451,34 @@ export function getBookingAggregate(
     headers: authHeaders(accessToken),
   });
 }
+
+export interface BookingSummaryResponse {
+  id: string;
+  agencyId: string;
+  bookingReference: string;
+  customerId: string;
+  branchId: string;
+  agentId: string;
+  status: string;
+  currencyCode: string;
+  totalAmount: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function listBookings(
+  accessToken: string,
+  filters: { status?: string; branchId?: string } = {},
+): Promise<BookingSummaryResponse[]> {
+  const params = new URLSearchParams();
+  if (filters.status) {
+    params.set('status', filters.status);
+  }
+  if (filters.branchId) {
+    params.set('branchId', filters.branchId);
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request<BookingSummaryResponse[]>(`/api/v1/bookings${query}`, {
+    headers: authHeaders(accessToken),
+  });
+}

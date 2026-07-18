@@ -111,4 +111,20 @@ export class BookingService {
     const withRelations = await this.bookingRepository.findBookingWithRelations(bookingId);
     return toBookingAggregateResponse(withRelations as unknown as Record<string, unknown>);
   }
+
+  // List view (TASKS.md T35) — summary rows only, no nested passengers/sectors/fares.
+  async list(status?: string, branchId?: string) {
+    const where: Record<string, unknown> = {};
+    if (status) {
+      where.status = status;
+    }
+    if (branchId) {
+      where.branchId = branchId;
+    }
+    const bookings = (await this.bookingRepository.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    })) as Record<string, unknown>[];
+    return bookings.map(toBookingAggregateResponse);
+  }
 }

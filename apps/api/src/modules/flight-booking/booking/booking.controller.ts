@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../core/auth/jwt-auth.guard';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -7,6 +7,12 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 @UseGuards(JwtAuthGuard)
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
+
+  @Get()
+  async list(@Query('status') status?: string, @Query('branchId') branchId?: string) {
+    const bookings = await this.bookingService.list(status, branchId);
+    return { data: bookings, meta: {} };
+  }
 
   @Post()
   async create(@Body() dto: CreateBookingDto) {
