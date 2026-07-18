@@ -27,6 +27,7 @@ model Agency {
   settings  Settings?
   branches  Branch[]
   customers Customer[]
+  bookings  Booking[]
 
   @@map("agencies")
 }
@@ -57,6 +58,7 @@ model User {
 
   agency Agency? @relation(fields: [tenantId], references: [id])
   branch Branch?  @relation(fields: [branchId], references: [id])
+  bookingsAsAgent Booking[]
 
   @@index([tenantId])
   @@index([tenantId, role])
@@ -111,8 +113,9 @@ model Branch {
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
-  agency Agency @relation(fields: [tenantId], references: [id])
-  users  User[]
+  agency   Agency    @relation(fields: [tenantId], references: [id])
+  users    User[]
+  bookings Booking[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -133,7 +136,8 @@ model Customer {
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt            DateTime? @map("deleted_at") @db.Timestamptz
 
-  agency Agency @relation(fields: [tenantId], references: [id])
+  agency   Agency    @relation(fields: [tenantId], references: [id])
+  bookings Booking[]
 
   @@index([tenantId])
   @@index([tenantId, email])
@@ -202,4 +206,46 @@ model Airline {
 
   @@index([name])
   @@map("airlines")
+}
+
+// Status column only in this task (TASKS.md T28) — the Workflow Engine (T36-T39) becomes
+// the sole mutator of this field later; no transition logic exists yet.
+enum BookingStatus {
+  draft
+  reserved
+  ticket_issued
+  invoiced
+  paid
+  completed
+  refunded
+  cancelled
+
+  @@map("booking_status")
+}
+
+model Booking {
+  id               String        @id @default(uuid()) @db.Uuid
+  tenantId         String        @map("tenant_id") @db.Uuid
+  bookingReference String        @map("booking_reference") @db.VarChar(30)
+  customerId       String        @map("customer_id") @db.Uuid
+  branchId         String        @map("branch_id") @db.Uuid
+  agentId          String        @map("agent_id") @db.Uuid
+  status           BookingStatus @default(draft)
+  currencyCode     String        @map("currency_code") @db.Char(3)
+  totalAmount      Decimal       @default(0.00) @map("total_amount") @db.Decimal(12, 2)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt        DateTime?     @map("deleted_at") @db.Timestamptz
+
+  agency   Agency   @relation(fields: [tenantId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+  branch   Branch   @relation(fields: [branchId], references: [id])
+  agent    User     @relation(fields: [agentId], references: [id])
+
+  @@unique([tenantId, bookingReference])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, customerId])
+  @@index([tenantId, createdAt])
+  @@map("bookings")
 }
