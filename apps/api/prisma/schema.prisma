@@ -23,9 +23,10 @@ model Agency {
   updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime?    @map("deleted_at") @db.Timestamptz
 
-  users    User[]
-  settings Settings?
-  branches Branch[]
+  users     User[]
+  settings  Settings?
+  branches  Branch[]
+  customers Customer[]
 
   @@map("agencies")
 }
@@ -116,4 +117,26 @@ model Branch {
   @@unique([tenantId, code])
   @@index([tenantId])
   @@map("branches")
+}
+
+model Customer {
+  id                   String    @id @default(uuid()) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  fullName             String    @map("full_name") @db.VarChar(255)
+  email                String?   @db.VarChar(255)
+  phone                String?   @db.VarChar(30)
+  passportNumber       String?   @map("passport_number") @db.VarChar(50)
+  nationalityCountryId String?   @map("nationality_country_id") @db.Uuid
+  dateOfBirth          DateTime? @map("date_of_birth") @db.Date
+  addressLine1         String?   @map("address_line1") @db.VarChar(255)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz
+
+  agency Agency @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, email])
+  @@index([tenantId, phone])
+  @@map("customers")
 }

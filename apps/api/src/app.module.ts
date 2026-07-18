@@ -12,6 +12,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { BranchModule } from './modules/branch/branch.module';
 import { UserModule } from './modules/user/user.module';
 import { MyProfileModule } from './modules/my-profile/my-profile.module';
+import { CustomerModule } from './modules/customer/customer.module';
 
 export type _SharedTypesImportCheck = SharedTypesPlaceholder;
 
@@ -24,6 +25,7 @@ export type _SharedTypesImportCheck = SharedTypesPlaceholder;
     BranchModule,
     UserModule,
     MyProfileModule,
+    CustomerModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
