@@ -42,6 +42,7 @@ enum UserRole {
 model User {
   id           String    @id @default(uuid()) @db.Uuid
   tenantId     String?   @map("tenant_id") @db.Uuid
+  branchId     String?   @map("branch_id") @db.Uuid
   email        String    @unique @db.VarChar(255)
   passwordHash String    @map("password_hash") @db.VarChar(255)
   fullName     String    @map("full_name") @db.VarChar(255)
@@ -54,6 +55,7 @@ model User {
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
   agency Agency? @relation(fields: [tenantId], references: [id])
+  branch Branch?  @relation(fields: [branchId], references: [id])
 
   @@index([tenantId])
   @@index([tenantId, role])
@@ -109,6 +111,7 @@ model Branch {
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
   agency Agency @relation(fields: [tenantId], references: [id])
+  users  User[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
