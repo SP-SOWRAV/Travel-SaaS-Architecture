@@ -190,3 +190,16 @@ model Airport {
   @@index([icaoCode])
   @@map("airports")
 }
+
+model Airline {
+  id        String   @id @default(uuid()) @db.Uuid
+  iataCode  String   @unique @map("iata_code") @db.Char(2)
+  icaoCode  String?  @map("icao_code") @db.Char(3)
+  name      String   @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([name])
+  @@map("airlines")
+}

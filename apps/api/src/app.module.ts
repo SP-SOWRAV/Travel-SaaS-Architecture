@@ -14,6 +14,7 @@ import { UserModule } from './modules/user/user.module';
 import { MyProfileModule } from './modules/my-profile/my-profile.module';
 import { CustomerModule } from './modules/customer/customer.module';
 import { AirportModule } from './modules/airport/airport.module';
+import { AirlineModule } from './modules/airline/airline.module';
 
 export type _SharedTypesImportCheck = SharedTypesPlaceholder;
 
@@ -28,6 +29,7 @@ export type _SharedTypesImportCheck = SharedTypesPlaceholder;
     MyProfileModule,
     CustomerModule,
     AirportModule,
+    AirlineModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
