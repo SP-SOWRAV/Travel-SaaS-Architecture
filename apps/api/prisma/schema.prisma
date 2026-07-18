@@ -59,6 +59,7 @@ model User {
   agency Agency? @relation(fields: [tenantId], references: [id])
   branch Branch?  @relation(fields: [branchId], references: [id])
   bookingsAsAgent Booking[]
+  remarksCreated  Remark[]
 
   @@index([tenantId])
   @@index([tenantId, role])
@@ -248,6 +249,8 @@ model Booking {
   passengers Passenger[]
   sectors    Sector[]
   fares      Fare[]
+  tickets    Ticket[]
+  remarks    Remark[]
 
   @@unique([tenantId, bookingReference])
   @@index([tenantId])
@@ -282,6 +285,7 @@ model Passenger {
 
   booking Booking @relation(fields: [bookingId], references: [id])
   fares   Fare[]
+  tickets Ticket[]
 
   @@index([bookingId])
   @@map("passengers")
@@ -359,4 +363,57 @@ model Tax {
 
   @@index([fareId])
   @@map("taxes")
+}
+
+// Placeholder until the Workflow Engine (T39) wires real issuance — ticketNumber stays
+// null until then. Postgres treats NULL as distinct in a UNIQUE constraint, so a plain
+// @unique here already gives "unique where not null" for free (DATABASE.md §3.12).
+enum TicketStatus {
+  unissued
+  issued
+  voided
+
+  @@map("ticket_status")
+}
+
+model Ticket {
+  id           String       @id @default(uuid()) @db.Uuid
+  bookingId    String       @map("booking_id") @db.Uuid
+  passengerId  String       @map("passenger_id") @db.Uuid
+  ticketNumber String?      @unique @map("ticket_number") @db.VarChar(30)
+  status       TicketStatus @default(unissued)
+  issuedAt     DateTime?    @map("issued_at") @db.Timestamptz
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  booking   Booking   @relation(fields: [bookingId], references: [id])
+  passenger Passenger @relation(fields: [passengerId], references: [id])
+
+  @@index([bookingId])
+  @@index([passengerId])
+  @@map("tickets")
+}
+
+enum RemarkType {
+  internal
+  customer_facing
+
+  @@map("remark_type")
+}
+
+// Append-oriented (DATABASE.md §3.13) — no updatedAt; a correction adds a new remark
+// rather than mutating history, so there is deliberately no update/delete endpoint.
+model Remark {
+  id         String     @id @default(uuid()) @db.Uuid
+  bookingId  String     @map("booking_id") @db.Uuid
+  remarkType RemarkType @default(internal) @map("remark_type")
+  remarkText String     @map("remark_text") @db.Text
+  createdBy  String     @map("created_by") @db.Uuid
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+  creator User    @relation(fields: [createdBy], references: [id])
+
+  @@index([bookingId])
+  @@map("remarks")
 }

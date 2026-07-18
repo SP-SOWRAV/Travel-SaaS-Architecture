@@ -231,4 +231,22 @@ export class BookingRepository extends BaseRepository<Prisma.BookingDelegate> {
   deleteTax(taxId: string) {
     return this.prisma.tax.delete({ where: { id: taxId } });
   }
+
+  findTickets(bookingId: string) {
+    return this.prisma.ticket.findMany({ where: { bookingId }, orderBy: { createdAt: 'asc' } });
+  }
+
+  createTicket(bookingId: string, passengerId: string) {
+    return this.prisma.ticket.create({ data: { bookingId, passengerId } });
+  }
+
+  findRemarks(bookingId: string) {
+    return this.prisma.remark.findMany({ where: { bookingId }, orderBy: { createdAt: 'asc' } });
+  }
+
+  createRemark(bookingId: string, data: Record<string, unknown>) {
+    return this.prisma.remark.create({
+      data: { ...data, bookingId } as Prisma.RemarkUncheckedCreateInput,
+    });
+  }
 }
