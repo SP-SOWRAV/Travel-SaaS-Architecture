@@ -8,11 +8,17 @@ import { validate } from './core/config/env.validation';
 import { TenantContextMiddleware } from './core/tenant/tenant-context.middleware';
 import { HealthController } from './modules/health/health.controller';
 import { AuthModule } from './modules/auth/auth.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 export type _SharedTypesImportCheck = SharedTypesPlaceholder;
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true, validate }), CoreModule, AuthModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true, validate }),
+    CoreModule,
+    AuthModule,
+    SettingsModule,
+  ],
   controllers: [AppController, HealthController],
   providers: [AppService],
 })
