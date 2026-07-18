@@ -259,3 +259,54 @@ export function changeMyPassword(
     body: JSON.stringify({ currentPassword, newPassword }),
   });
 }
+
+export interface CustomerResponse {
+  id: string;
+  agencyId: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  passportNumber: string | null;
+  nationalityCountryId: string | null;
+  dateOfBirth: string | null;
+  addressLine1: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateCustomerInput = Pick<CustomerResponse, 'fullName'> &
+  Partial<Pick<CustomerResponse, 'email' | 'phone' | 'passportNumber' | 'dateOfBirth' | 'addressLine1'>>;
+
+export type UpdateCustomerInput = Partial<
+  Pick<CustomerResponse, 'fullName' | 'email' | 'phone' | 'passportNumber' | 'dateOfBirth' | 'addressLine1'>
+>;
+
+export function listCustomers(accessToken: string, q?: string): Promise<CustomerResponse[]> {
+  const query = q ? `?q=${encodeURIComponent(q)}` : '';
+  return request<CustomerResponse[]>(`/api/v1/customers${query}`, {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function createCustomer(
+  accessToken: string,
+  data: CreateCustomerInput,
+): Promise<CustomerResponse> {
+  return request<CustomerResponse>('/api/v1/customers', {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateCustomer(
+  accessToken: string,
+  id: string,
+  data: UpdateCustomerInput,
+): Promise<CustomerResponse> {
+  return request<CustomerResponse>(`/api/v1/customers/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
