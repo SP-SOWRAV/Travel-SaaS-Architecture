@@ -45,6 +45,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return body?.data as T;
 }
 
+function authHeaders(accessToken: string): HeadersInit {
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
 export interface LoginResponse {
   accessToken: string;
 }
@@ -53,5 +57,61 @@ export function login(email: string, password: string): Promise<LoginResponse> {
   return request<LoginResponse>('/api/v1/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
+  });
+}
+
+export interface SettingsResponse {
+  id: string;
+  agencyId: string;
+  legalName: string | null;
+  logoUrl: string | null;
+  theme: 'light' | 'dark' | 'system';
+  currencyCode: string;
+  timezone: string;
+  invoicePrefix: string;
+  ticketPrefix: string;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  cityId: string | null;
+  countryId: string | null;
+  postalCode: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type UpdateSettingsInput = Partial<
+  Pick<
+    SettingsResponse,
+    | 'legalName'
+    | 'logoUrl'
+    | 'theme'
+    | 'currencyCode'
+    | 'timezone'
+    | 'invoicePrefix'
+    | 'ticketPrefix'
+    | 'contactEmail'
+    | 'contactPhone'
+    | 'addressLine1'
+    | 'addressLine2'
+    | 'postalCode'
+  >
+>;
+
+export function getSettings(accessToken: string): Promise<SettingsResponse> {
+  return request<SettingsResponse>('/api/v1/settings', {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function updateSettings(
+  accessToken: string,
+  data: UpdateSettingsInput,
+): Promise<SettingsResponse> {
+  return request<SettingsResponse>('/api/v1/settings', {
+    method: 'PATCH',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
   });
 }
