@@ -343,3 +343,111 @@ export function listAirports(accessToken: string): Promise<AirportResponse[]> {
     headers: authHeaders(accessToken),
   });
 }
+
+export type PassengerTypeCode = 'ADT' | 'CHD' | 'INF';
+export type CabinClassCode = 'economy' | 'premium_economy' | 'business' | 'first';
+
+export interface CreateBookingPassengerInput {
+  firstName: string;
+  lastName: string;
+  dateOfBirth?: string;
+  passportNumber?: string;
+  passengerType?: PassengerTypeCode;
+}
+
+export interface CreateBookingSectorInput {
+  airlineId: string;
+  originAirportId: string;
+  destinationAirportId: string;
+  flightNumber: string;
+  cabinClass?: CabinClassCode;
+  departureAt: string;
+  arrivalAt: string;
+  sequenceNumber?: number;
+}
+
+export interface CreateBookingTaxInput {
+  taxCode: string;
+  description?: string;
+  amount: number;
+}
+
+export interface CreateBookingFareInput {
+  passengerIndex: number;
+  sectorIndex: number;
+  baseAmount: number;
+  taxes?: CreateBookingTaxInput[];
+}
+
+export interface CreateBookingAggregateInput {
+  customerId: string;
+  branchId: string;
+  passengers: CreateBookingPassengerInput[];
+  sectors: CreateBookingSectorInput[];
+  fares?: CreateBookingFareInput[];
+}
+
+export interface BookingPassengerResponse {
+  id: string;
+  firstName: string;
+  lastName: string;
+  passengerType: PassengerTypeCode;
+}
+
+export interface BookingSectorResponse {
+  id: string;
+  airlineId: string;
+  originAirportId: string;
+  destinationAirportId: string;
+  flightNumber: string;
+  cabinClass: CabinClassCode;
+  departureAt: string;
+  arrivalAt: string;
+  sequenceNumber: number;
+}
+
+export interface BookingFareResponse {
+  id: string;
+  passengerId: string;
+  sectorId: string;
+  baseAmount: string;
+  currencyCode: string;
+  taxes: { id: string; taxCode: string; description: string | null; amount: string }[];
+}
+
+export interface BookingAggregateResponse {
+  id: string;
+  agencyId: string;
+  bookingReference: string;
+  customerId: string;
+  branchId: string;
+  agentId: string;
+  status: string;
+  currencyCode: string;
+  totalAmount: string;
+  createdAt: string;
+  updatedAt: string;
+  passengers: BookingPassengerResponse[];
+  sectors: BookingSectorResponse[];
+  fares: BookingFareResponse[];
+}
+
+export function createBookingAggregate(
+  accessToken: string,
+  data: CreateBookingAggregateInput,
+): Promise<BookingAggregateResponse> {
+  return request<BookingAggregateResponse>('/api/v1/bookings', {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
+
+export function getBookingAggregate(
+  accessToken: string,
+  id: string,
+): Promise<BookingAggregateResponse> {
+  return request<BookingAggregateResponse>(`/api/v1/bookings/${id}`, {
+    headers: authHeaders(accessToken),
+  });
+}
