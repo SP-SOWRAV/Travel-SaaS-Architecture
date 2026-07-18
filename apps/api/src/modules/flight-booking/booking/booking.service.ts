@@ -6,6 +6,7 @@ import { CustomerService } from '../../customer/customer.service';
 import { SettingsService } from '../../settings/settings.service';
 import { TenantContextService } from '../../../core/tenant/tenant-context.service';
 import { WorkflowEngineService } from '../../../workflow-engine/workflow-engine.service';
+import { TransitionHistoryService } from '../../../workflow-engine/transition-history.service';
 import { AggregateBookingInput } from './booking.repository';
 import { BookingRepository } from './booking.repository';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -39,6 +40,7 @@ export class BookingService {
     private readonly settingsService: SettingsService,
     private readonly tenantContext: TenantContextService,
     private readonly workflowEngine: WorkflowEngineService,
+    private readonly transitionHistory: TransitionHistoryService,
   ) {}
 
   private async requireOwnBooking(bookingId: string) {
@@ -191,5 +193,11 @@ export class BookingService {
 
     await this.workflowEngine.transition(bookingId, WorkflowStage.TicketIssued, actorId, reason);
     return this.getAggregate(bookingId);
+  }
+
+  // T40: audit trail for the Booking detail page's transition history view.
+  async getTransitionHistory(bookingId: string) {
+    await this.requireOwnBooking(bookingId);
+    return this.transitionHistory.getHistory(bookingId);
   }
 }

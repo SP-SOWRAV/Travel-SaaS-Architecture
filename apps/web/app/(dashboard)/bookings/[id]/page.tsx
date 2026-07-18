@@ -1,16 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { BookingAggregateResponse, getBookingAggregate } from '../../../../src/lib/api-client';
+import {
+  BookingAggregateResponse,
+  WorkflowTransitionResponse,
+  getBookingAggregate,
+  getBookingTransitions,
+} from '../../../../src/lib/api-client';
 import { useAuth } from '../../../../src/lib/auth-context';
+import { StatusActions } from '../../../../src/components/bookings/status-actions';
 import { StatusBadge } from '../../../../src/components/bookings/status-badge';
+import { TransitionHistory } from '../../../../src/components/bookings/transition-history';
 
 export default function BookingDetailPage() {
   const { accessToken, isAuthenticated, isInitializing } = useAuth();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [booking, setBooking] = useState<BookingAggregateResponse | null>(null);
+  const [transitions, setTransitions] = useState<WorkflowTransitionResponse[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,6 +27,13 @@ export default function BookingDetailPage() {
     }
   }, [isInitializing, isAuthenticated, router]);
 
+  const loadTransitions = useCallback(() => {
+    if (!accessToken || !params.id) {
+      return;
+    }
+    getBookingTransitions(accessToken, params.id).then(setTransitions).catch(() => undefined);
+  }, [accessToken, params.id]);
+
   useEffect(() => {
     if (!accessToken || !params.id) {
       return;
@@ -26,7 +41,16 @@ export default function BookingDetailPage() {
     getBookingAggregate(accessToken, params.id)
       .then(setBooking)
       .catch(() => setLoadError('Failed to load booking'));
-  }, [accessToken, params.id]);
+    loadTransitions();
+  }, [accessToken, params.id, loadTransitions]);
+
+  // Status action buttons call this after a successful transition — updates the visible
+  // status and appends a history entry entirely client-side, no full page reload
+  // (TASKS.md T40 acceptance criteria).
+  const handleStatusUpdated = (updated: BookingAggregateResponse) => {
+    setBooking(updated);
+    loadTransitions();
+  };
 
   if (isInitializing || !isAuthenticated) {
     return null;
@@ -49,6 +73,12 @@ export default function BookingDetailPage() {
               <h1 className="text-2xl font-semibold text-neutral-900">{booking.bookingReference}</h1>
               <StatusBadge status={booking.status} />
             </div>
+
+            {accessToken && (
+              <div className="mb-6">
+                <StatusActions accessToken={accessToken} booking={booking} onUpdated={handleStatusUpdated} />
+              </div>
+            )}
 
             <div className="mb-6 rounded-lg border border-neutral-200 bg-white p-4">
               <dl className="grid grid-cols-2 gap-4 text-sm">
@@ -143,6 +173,11 @@ export default function BookingDetailPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-6 rounded-lg border border-neutral-200 bg-white p-4">
+              <h2 className="mb-3 text-lg font-semibold text-neutral-900">Transition History</h2>
+              <TransitionHistory transitions={transitions} />
             </div>
           </>
         )}

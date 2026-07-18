@@ -46,4 +46,10 @@ export class BookingController {
     const booking = await this.bookingService.cancel(id, dto.reason);
     return { data: booking, meta: {} };
   }
+
+  @Get(':id/transitions')
+  async getTransitions(@Param('id', ParseUUIDPipe) id: string) {
+    const transitions = await this.bookingService.getTransitionHistory(id);
+    return { data: transitions, meta: {} };
+  }
 }

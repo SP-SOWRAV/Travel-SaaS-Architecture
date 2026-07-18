@@ -482,3 +482,58 @@ export function listBookings(
     headers: authHeaders(accessToken),
   });
 }
+
+export function reserveBooking(
+  accessToken: string,
+  bookingId: string,
+  reason?: string,
+): Promise<BookingAggregateResponse> {
+  return request<BookingAggregateResponse>(`/api/v1/bookings/${bookingId}/reserve`, {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(reason ? { reason } : {}),
+  });
+}
+
+export function issueTicketForBooking(
+  accessToken: string,
+  bookingId: string,
+  reason?: string,
+): Promise<BookingAggregateResponse> {
+  return request<BookingAggregateResponse>(`/api/v1/bookings/${bookingId}/issue-ticket`, {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(reason ? { reason } : {}),
+  });
+}
+
+export function cancelBooking(
+  accessToken: string,
+  bookingId: string,
+  reason: string,
+): Promise<BookingAggregateResponse> {
+  return request<BookingAggregateResponse>(`/api/v1/bookings/${bookingId}/cancel`, {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export interface WorkflowTransitionResponse {
+  id: string;
+  bookingId: string;
+  fromStage: string | null;
+  toStage: string;
+  actorId: string | null;
+  reason: string | null;
+  createdAt: string;
+}
+
+export function getBookingTransitions(
+  accessToken: string,
+  bookingId: string,
+): Promise<WorkflowTransitionResponse[]> {
+  return request<WorkflowTransitionResponse[]>(`/api/v1/bookings/${bookingId}/transitions`, {
+    headers: authHeaders(accessToken),
+  });
+}
