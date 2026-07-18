@@ -69,4 +69,66 @@ export class BookingRepository extends BaseRepository<Prisma.BookingDelegate> {
   deleteSector(sectorId: string) {
     return this.prisma.sector.delete({ where: { id: sectorId } });
   }
+
+  // Fares/taxes always come back with taxes included, so a caller can compute the
+  // fare+tax rollup for a booking without a second round trip (TASKS.md T31).
+  findFares(bookingId: string) {
+    return this.prisma.fare.findMany({
+      where: { bookingId },
+      include: { taxes: true },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  findFareById(bookingId: string, fareId: string) {
+    return this.prisma.fare.findFirst({
+      where: { id: fareId, bookingId },
+      include: { taxes: true },
+    });
+  }
+
+  findPassengerInBooking(bookingId: string, passengerId: string) {
+    return this.prisma.passenger.findFirst({ where: { id: passengerId, bookingId } });
+  }
+
+  findSectorInBooking(bookingId: string, sectorId: string) {
+    return this.prisma.sector.findFirst({ where: { id: sectorId, bookingId } });
+  }
+
+  createFare(bookingId: string, data: Record<string, unknown>) {
+    return this.prisma.fare.create({
+      data: { ...data, bookingId } as Prisma.FareUncheckedCreateInput,
+      include: { taxes: true },
+    });
+  }
+
+  updateFare(fareId: string, data: Record<string, unknown>) {
+    return this.prisma.fare.update({
+      where: { id: fareId },
+      data: data as Prisma.FareUpdateInput,
+      include: { taxes: true },
+    });
+  }
+
+  deleteFare(fareId: string) {
+    return this.prisma.fare.delete({ where: { id: fareId } });
+  }
+
+  findTaxes(fareId: string) {
+    return this.prisma.tax.findMany({ where: { fareId }, orderBy: { createdAt: 'asc' } });
+  }
+
+  findTaxById(fareId: string, taxId: string) {
+    return this.prisma.tax.findFirst({ where: { id: taxId, fareId } });
+  }
+
+  createTax(fareId: string, data: Record<string, unknown>) {
+    return this.prisma.tax.create({
+      data: { ...data, fareId } as Prisma.TaxUncheckedCreateInput,
+    });
+  }
+
+  deleteTax(taxId: string) {
+    return this.prisma.tax.delete({ where: { id: taxId } });
+  }
 }

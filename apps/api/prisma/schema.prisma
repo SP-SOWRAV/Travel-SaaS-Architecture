@@ -247,6 +247,7 @@ model Booking {
   agent      User        @relation(fields: [agentId], references: [id])
   passengers Passenger[]
   sectors    Sector[]
+  fares      Fare[]
 
   @@unique([tenantId, bookingReference])
   @@index([tenantId])
@@ -280,6 +281,7 @@ model Passenger {
   updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   booking Booking @relation(fields: [bookingId], references: [id])
+  fares   Fare[]
 
   @@index([bookingId])
   @@map("passengers")
@@ -317,5 +319,44 @@ model Sector {
   @@index([airlineId])
   @@index([originAirportId])
   @@index([destinationAirportId])
+  fares Fare[]
   @@map("sectors")
+}
+
+model Fare {
+  id           String   @id @default(uuid()) @db.Uuid
+  bookingId    String   @map("booking_id") @db.Uuid
+  passengerId  String   @map("passenger_id") @db.Uuid
+  sectorId     String   @map("sector_id") @db.Uuid
+  baseAmount   Decimal  @default(0.00) @map("base_amount") @db.Decimal(12, 2)
+  currencyCode String   @map("currency_code") @db.Char(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  booking   Booking   @relation(fields: [bookingId], references: [id])
+  passenger Passenger @relation(fields: [passengerId], references: [id])
+  sector    Sector    @relation(fields: [sectorId], references: [id])
+  taxes     Tax[]
+
+  @@unique([passengerId, sectorId])
+  @@index([bookingId])
+  @@index([passengerId])
+  @@index([sectorId])
+  @@map("fares")
+}
+
+// No updatedAt (DATABASE.md §3.11 lists created_at only) — a wrong tax line is deleted and
+// recreated, never edited in place.
+model Tax {
+  id          String   @id @default(uuid()) @db.Uuid
+  fareId      String   @map("fare_id") @db.Uuid
+  taxCode     String   @map("tax_code") @db.VarChar(10)
+  description String?  @db.VarChar(255)
+  amount      Decimal  @default(0.00) @db.Decimal(12, 2)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  fare Fare @relation(fields: [fareId], references: [id])
+
+  @@index([fareId])
+  @@map("taxes")
 }
