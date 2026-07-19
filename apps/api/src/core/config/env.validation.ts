@@ -3,6 +3,7 @@ export interface EnvironmentVariables {
   PORT: number;
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
+  CORS_ORIGIN: string;
 }
 
 /**
@@ -40,6 +41,14 @@ export function validate(config: Record<string, unknown>): EnvironmentVariables 
       ? config.JWT_EXPIRES_IN
       : '1h';
 
+  // API_RULES §21: CORS restricted to known frontend origins, never '*' — defaults to the
+  // local web dev origin so the frontend can reach the API out of the box; every other
+  // environment sets its own known origin(s) via this var (comma-separated).
+  const corsOrigin =
+    typeof config.CORS_ORIGIN === 'string' && config.CORS_ORIGIN.trim() !== ''
+      ? config.CORS_ORIGIN
+      : 'http://localhost:3000';
+
   if (errors.length > 0) {
     throw new Error(`Invalid environment configuration:\n- ${errors.join('\n- ')}`);
   }
@@ -49,5 +58,6 @@ export function validate(config: Record<string, unknown>): EnvironmentVariables 
     PORT: port,
     JWT_SECRET: jwtSecret as string,
     JWT_EXPIRES_IN: jwtExpiresIn,
+    CORS_ORIGIN: corsOrigin,
   };
 }

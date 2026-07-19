@@ -81,6 +81,7 @@ export class PaymentRepository extends BaseRepository<Prisma.PaymentDelegate> {
     return this.delegate.findMany({
       where: { invoiceId, tenantId: this.tenantCtx.requireTenantId() },
       orderBy: { paidAt: 'asc' },
+      include: { receipt: true },
     });
   }
 

@@ -12,6 +12,7 @@ import { useAuth } from '../../../../src/lib/auth-context';
 import { StatusActions } from '../../../../src/components/bookings/status-actions';
 import { StatusBadge } from '../../../../src/components/bookings/status-badge';
 import { TransitionHistory } from '../../../../src/components/bookings/transition-history';
+import { FinancePanel } from '../../../../src/components/finance/finance-panel';
 
 export default function BookingDetailPage() {
   const { accessToken, isAuthenticated, isInitializing } = useAuth();
@@ -34,21 +35,33 @@ export default function BookingDetailPage() {
     getBookingTransitions(accessToken, params.id).then(setTransitions).catch(() => undefined);
   }, [accessToken, params.id]);
 
-  useEffect(() => {
+  const loadBooking = useCallback(() => {
     if (!accessToken || !params.id) {
       return;
     }
     getBookingAggregate(accessToken, params.id)
       .then(setBooking)
       .catch(() => setLoadError('Failed to load booking'));
+  }, [accessToken, params.id]);
+
+  useEffect(() => {
+    loadBooking();
     loadTransitions();
-  }, [accessToken, params.id, loadTransitions]);
+  }, [loadBooking, loadTransitions]);
 
   // Status action buttons call this after a successful transition — updates the visible
   // status and appends a history entry entirely client-side, no full page reload
   // (TASKS.md T40 acceptance criteria).
   const handleStatusUpdated = (updated: BookingAggregateResponse) => {
     setBooking(updated);
+    loadTransitions();
+  };
+
+  // Finance actions (T45: generate invoice, record payment, process refund) can silently
+  // move the booking's own status via the Workflow Engine — refresh both the booking and
+  // its transition history the same way status actions already do (T40 pattern above).
+  const handleFinanceChanged = () => {
+    loadBooking();
     loadTransitions();
   };
 
@@ -174,6 +187,18 @@ export default function BookingDetailPage() {
                 </tbody>
               </table>
             </div>
+
+            {accessToken && (
+              <div className="mt-6">
+                <FinancePanel
+                  accessToken={accessToken}
+                  bookingId={booking.id}
+                  bookingStatus={booking.status}
+                  currencyCode={booking.currencyCode}
+                  onBookingChanged={handleFinanceChanged}
+                />
+              </div>
+            )}
 
             <div className="mt-6 rounded-lg border border-neutral-200 bg-white p-4">
               <h2 className="mb-3 text-lg font-semibold text-neutral-900">Transition History</h2>

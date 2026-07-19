@@ -537,3 +537,151 @@ export function getBookingTransitions(
     headers: authHeaders(accessToken),
   });
 }
+
+export interface InvoiceLineResponse {
+  id: string;
+  description: string;
+  quantity: number;
+  unitAmount: string;
+  lineTotal: string;
+  sortOrder: number;
+}
+
+export type InvoiceStatus = 'issued' | 'partially_paid' | 'paid' | 'void';
+
+export interface InvoiceResponse {
+  id: string;
+  agencyId: string;
+  bookingId: string;
+  invoiceNumber: string;
+  currencyCode: string;
+  subtotalAmount: string;
+  taxAmount: string;
+  totalAmount: string;
+  status: InvoiceStatus;
+  issuedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  lines?: InvoiceLineResponse[];
+}
+
+export function generateInvoice(
+  accessToken: string,
+  bookingId: string,
+  reason?: string,
+): Promise<InvoiceResponse> {
+  return request<InvoiceResponse>(`/api/v1/bookings/${bookingId}/invoice`, {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(reason ? { reason } : {}),
+  });
+}
+
+export function listInvoices(
+  accessToken: string,
+  filters: { status?: string; bookingId?: string } = {},
+): Promise<InvoiceResponse[]> {
+  const params = new URLSearchParams();
+  if (filters.status) {
+    params.set('status', filters.status);
+  }
+  if (filters.bookingId) {
+    params.set('bookingId', filters.bookingId);
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request<InvoiceResponse[]>(`/api/v1/invoices${query}`, {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function getInvoice(accessToken: string, id: string): Promise<InvoiceResponse> {
+  return request<InvoiceResponse>(`/api/v1/invoices/${id}`, {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export type PaymentMethodCode = 'cash' | 'card' | 'bank_transfer' | 'other';
+
+export interface ReceiptResponse {
+  id: string;
+  agencyId: string;
+  paymentId: string;
+  receiptNumber: string;
+  issuedAt: string;
+}
+
+export interface PaymentResponse {
+  id: string;
+  agencyId: string;
+  invoiceId: string;
+  amount: string;
+  currencyCode: string;
+  paymentMethod: PaymentMethodCode;
+  reference: string | null;
+  receivedBy: string;
+  paidAt: string;
+  createdAt: string;
+  receipt?: ReceiptResponse;
+}
+
+export interface RecordPaymentInput {
+  amount: number;
+  paymentMethod: PaymentMethodCode;
+  reference?: string;
+  reason?: string;
+}
+
+export function recordPayment(
+  accessToken: string,
+  invoiceId: string,
+  data: RecordPaymentInput,
+): Promise<PaymentResponse> {
+  return request<PaymentResponse>(`/api/v1/invoices/${invoiceId}/payments`, {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
+
+export function listPaymentsForInvoice(accessToken: string, invoiceId: string): Promise<PaymentResponse[]> {
+  return request<PaymentResponse[]>(`/api/v1/invoices/${invoiceId}/payments`, {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export interface RefundResponse {
+  id: string;
+  agencyId: string;
+  invoiceId: string;
+  paymentId: string | null;
+  amount: string;
+  currencyCode: string;
+  reason: string;
+  processedBy: string;
+  refundedAt: string;
+  createdAt: string;
+}
+
+export interface ProcessRefundInput {
+  amount: number;
+  reason: string;
+  paymentId?: string;
+}
+
+export function processRefund(
+  accessToken: string,
+  invoiceId: string,
+  data: ProcessRefundInput,
+): Promise<RefundResponse> {
+  return request<RefundResponse>(`/api/v1/invoices/${invoiceId}/refunds`, {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+    body: JSON.stringify(data),
+  });
+}
+
+export function listRefundsForInvoice(accessToken: string, invoiceId: string): Promise<RefundResponse[]> {
+  return request<RefundResponse[]>(`/api/v1/invoices/${invoiceId}/refunds`, {
+    headers: authHeaders(accessToken),
+  });
+}
