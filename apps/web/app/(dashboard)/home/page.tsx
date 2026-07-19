@@ -12,7 +12,7 @@ import { RecentActivity } from '../../../src/components/dashboard/recent-activit
 // rather than at a literal new (dashboard)/page.tsx, which would collide with the
 // existing root app/page.tsx at "/" and be unreachable from the normal sign-in flow.
 export default function DashboardPage() {
-  const { accessToken, isAuthenticated, isInitializing, user, logout } = useAuth();
+  const { accessToken, isAuthenticated, isInitializing, user } = useAuth();
   const router = useRouter();
   const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -45,18 +45,8 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-neutral-50 px-4 py-8">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6">
           <h1 className="text-2xl font-semibold text-neutral-900">Dashboard</h1>
-          <button
-            type="button"
-            onClick={() => {
-              logout();
-              router.push('/login');
-            }}
-            className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-          >
-            Log out
-          </button>
         </div>
 
         {loadError && (
