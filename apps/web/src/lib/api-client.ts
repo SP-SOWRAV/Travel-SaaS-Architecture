@@ -685,3 +685,77 @@ export function listRefundsForInvoice(accessToken: string, invoiceId: string): P
     headers: authHeaders(accessToken),
   });
 }
+
+export interface ReportFilters {
+  createdAfter?: string;
+  createdBefore?: string;
+  branchId?: string;
+}
+
+function reportQuery(filters: ReportFilters): string {
+  const params = new URLSearchParams();
+  if (filters.createdAfter) {
+    params.set('createdAfter', filters.createdAfter);
+  }
+  if (filters.createdBefore) {
+    params.set('createdBefore', filters.createdBefore);
+  }
+  if (filters.branchId) {
+    params.set('branchId', filters.branchId);
+  }
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
+export interface SalesReportResponse {
+  currencyCode: string;
+  invoiceCount: number;
+  totalSales: string;
+  totalSubtotal: string;
+  totalTax: string;
+  byStatus: { status: string; count: number; total: string }[];
+}
+
+export function getSalesReport(accessToken: string, filters: ReportFilters = {}): Promise<SalesReportResponse> {
+  return request<SalesReportResponse>(`/api/v1/reports/sales${reportQuery(filters)}`, {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export interface OutstandingReportResponse {
+  currencyCode: string;
+  totalOutstanding: string;
+  invoices: {
+    invoiceId: string;
+    invoiceNumber: string;
+    bookingId: string;
+    bookingReference: string;
+    status: string;
+    totalAmount: string;
+    paidAmount: string;
+    outstandingAmount: string;
+  }[];
+}
+
+export function getOutstandingReport(
+  accessToken: string,
+  filters: ReportFilters = {},
+): Promise<OutstandingReportResponse> {
+  return request<OutstandingReportResponse>(`/api/v1/reports/outstanding${reportQuery(filters)}`, {
+    headers: authHeaders(accessToken),
+  });
+}
+
+export interface AgentPerformanceResponse {
+  currencyCode: string;
+  agents: { agentId: string; agentName: string; bookingCount: number; totalSales: string }[];
+}
+
+export function getAgentPerformanceReport(
+  accessToken: string,
+  filters: ReportFilters = {},
+): Promise<AgentPerformanceResponse> {
+  return request<AgentPerformanceResponse>(`/api/v1/reports/agent-performance${reportQuery(filters)}`, {
+    headers: authHeaders(accessToken),
+  });
+}
