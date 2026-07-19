@@ -17,6 +17,7 @@ import { AirportModule } from './modules/airport/airport.module';
 import { AirlineModule } from './modules/airline/airline.module';
 import { FlightBookingModule } from './modules/flight-booking/flight-booking.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { WorkflowEngineModule } from './workflow-engine/workflow-engine.module';
 
 export type _SharedTypesImportCheck = SharedTypesPlaceholder;
@@ -36,6 +37,7 @@ export type _SharedTypesImportCheck = SharedTypesPlaceholder;
     WorkflowEngineModule,
     FlightBookingModule,
     FinanceModule,
+    ReportsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
