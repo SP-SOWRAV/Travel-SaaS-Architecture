@@ -1,0 +1,12 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { BaseRepository } from '../../core/repository/base.repository';
+import { PrismaService } from '../../core/database/prisma.service';
+import { TenantContextService } from '../../core/tenant/tenant-context.service';
+
+@Injectable()
+export class ActivityLogRepository extends BaseRepository<Prisma.ActivityLogDelegate> {
+  constructor(prisma: PrismaService, tenantContext: TenantContextService) {
+    super(prisma.activityLog, tenantContext);
+  }
+}

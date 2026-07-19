@@ -33,6 +33,7 @@ model Agency {
   receipts  Receipt[]
   refunds   Refund[]
   transactions Transaction[]
+  activityLogs ActivityLog[]
 
   @@map("agencies")
 }
@@ -69,6 +70,7 @@ model User {
   paymentsReceived Payment[]
   refundsProcessed Refund[]
   transactionsCreated Transaction[]
+  activityLogsAsActor ActivityLog[]
 
   @@index([tenantId])
   @@index([tenantId, role])
@@ -611,4 +613,30 @@ model Transaction {
   @@index([tenantId, createdAt])
   @@index([referenceTable, referenceId])
   @@map("transactions")
+}
+
+// Cross-cutting audit trail of mutating actions across every module (MASTER.md module #14,
+// DATABASE.md §3.21) — written by the global ActivityLogInterceptor (T49), never by
+// individual modules directly. entity_id is intentionally not a DB-level FK since it
+// polymorphically points at any entity type in the schema (same reasoning as
+// Transaction.referenceId, DATABASE.md §9). Immutable: no updatedAt, no deletedAt.
+model ActivityLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String?  @map("tenant_id") @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   String   @map("entity_id") @db.Uuid
+  metadata   Json?    @db.JsonB
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  agency Agency? @relation(fields: [tenantId], references: [id])
+  actor  User?   @relation(fields: [actorId], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, createdAt])
+  @@index([metadata], type: Gin)
+  @@map("activity_logs")
 }

@@ -785,3 +785,32 @@ export function getDashboardSummary(accessToken: string): Promise<DashboardSumma
     headers: authHeaders(accessToken),
   });
 }
+
+export interface ActivityLogResponse {
+  id: string;
+  agencyId: string | null;
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata: unknown;
+  ipAddress: string | null;
+  createdAt: string;
+}
+
+export function listActivityLog(
+  accessToken: string,
+  filters: { entityType?: string; action?: string } = {},
+): Promise<ActivityLogResponse[]> {
+  const params = new URLSearchParams();
+  if (filters.entityType) {
+    params.set('entityType', filters.entityType);
+  }
+  if (filters.action) {
+    params.set('action', filters.action);
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request<ActivityLogResponse[]>(`/api/v1/activity-log${query}`, {
+    headers: authHeaders(accessToken),
+  });
+}
