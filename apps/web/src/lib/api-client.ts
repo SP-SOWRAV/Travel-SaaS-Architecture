@@ -15,9 +15,9 @@ export class ApiRequestError extends Error {
   }
 }
 
-// Normalizes both the documented API_RULES §7 error envelope and Nest's default
-// exception shape (used until the global exception filter, TASKS.md T50, lands),
-// so callers only ever handle one ApiError shape.
+// Every response now uses the API_RULES §7 { error: {...} } envelope (the global
+// HttpExceptionFilter, TASKS.md T50). The `message` fallback branch stays only as a
+// defense against a future response that somehow bypasses the filter entirely.
 function normalizeError(body: unknown): ApiError {
   const parsed = body as { error?: ApiError; message?: string | string[] } | null;
   if (parsed?.error) {

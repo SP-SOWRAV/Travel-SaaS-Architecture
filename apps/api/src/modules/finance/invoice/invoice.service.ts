@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { isValidWorkflowTransition, WorkflowStage } from '@project/shared-types';
+import { isValidWorkflowTransition, WORKFLOW_TRANSITIONS, WorkflowStage } from '@project/shared-types';
+import { InvalidWorkflowTransitionException } from '../../../core/filters/exceptions';
 import { BookingRepository } from '../../flight-booking/booking/booking.repository';
 import { SettingsService } from '../../settings/settings.service';
 import { TenantContextService } from '../../../core/tenant/tenant-context.service';
@@ -57,8 +58,9 @@ export class InvoiceService {
     // the duplicate-invoice guard just below with no way to retry.
     const currentStage = (booking as { status: string }).status as unknown as WorkflowStage;
     if (!isValidWorkflowTransition(currentStage, WorkflowStage.Invoiced)) {
-      throw new ConflictException(
+      throw new InvalidWorkflowTransitionException(
         `Invalid workflow transition: '${currentStage}' -> '${WorkflowStage.Invoiced}' is not allowed`,
+        WORKFLOW_TRANSITIONS[currentStage],
       );
     }
 

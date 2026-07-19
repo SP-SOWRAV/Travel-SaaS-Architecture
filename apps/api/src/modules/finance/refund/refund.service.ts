@@ -1,5 +1,6 @@
-import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import { isValidWorkflowTransition, WorkflowStage } from '@project/shared-types';
+import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { isValidWorkflowTransition, WORKFLOW_TRANSITIONS, WorkflowStage } from '@project/shared-types';
+import { InvalidWorkflowTransitionException } from '../../../core/filters/exceptions';
 import { BookingRepository } from '../../flight-booking/booking/booking.repository';
 import { InvoiceRepository } from '../invoice/invoice.repository';
 import { PaymentRepository } from '../payment/payment.repository';
@@ -45,8 +46,9 @@ export class RefundService {
     }
     const currentStage = booking.status as unknown as WorkflowStage;
     if (!isValidWorkflowTransition(currentStage, WorkflowStage.Refunded)) {
-      throw new ConflictException(
+      throw new InvalidWorkflowTransitionException(
         `Invalid workflow transition: '${currentStage}' -> '${WorkflowStage.Refunded}' is not allowed`,
+        WORKFLOW_TRANSITIONS[currentStage],
       );
     }
 
