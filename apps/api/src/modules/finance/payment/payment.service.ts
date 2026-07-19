@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException, UnprocessableEntityEx
 import { WorkflowStage } from '@project/shared-types';
 import { BookingRepository } from '../../flight-booking/booking/booking.repository';
 import { InvoiceRepository } from '../invoice/invoice.repository';
+import { PrismaService } from '../../../core/database/prisma.service';
 import { TenantContextService } from '../../../core/tenant/tenant-context.service';
 import { WorkflowEngineService } from '../../../workflow-engine/workflow-engine.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -36,6 +37,7 @@ function toPaymentResponse(payment: Record<string, unknown>) {
 @Injectable()
 export class PaymentService {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly paymentRepository: PaymentRepository,
     private readonly invoiceRepository: InvoiceRepository,
     private readonly bookingRepository: BookingRepository,
@@ -47,6 +49,10 @@ export class PaymentService {
   // status and drives the booking's lifecycle: any payment while still Invoiced moves
   // the booking to Paid; full settlement additionally advances Paid -> Completed in the
   // same call (Acceptance Criteria: "moves the booking through Paid to Completed").
+  // H2 hardening: the Payment/Receipt/Transaction row, the Invoice status update, and the
+  // Workflow Engine's booking-status update(s) now all commit as one Prisma transaction
+  // (CODING_STANDARDS §5) — previously these were separate statements, so a crash between
+  // them could leave a payment recorded but the invoice/booking still showing unpaid.
   async recordPayment(invoiceId: string, dto: CreatePaymentDto) {
     const invoice = (await this.invoiceRepository.findById(invoiceId)) as InvoiceRecord | null;
     if (!invoice) {
@@ -68,26 +74,36 @@ export class PaymentService {
     }
 
     const actorId = this.tenantContext.requireUserId();
-    const payment = await this.paymentRepository.createWithReceipt({
-      invoiceId,
-      amount: dto.amount,
-      currencyCode: invoice.currencyCode,
-      paymentMethod: dto.paymentMethod,
-      reference: dto.reference,
-      receivedBy: actorId,
-      receiptNumber: generateReceiptNumber(),
-    });
-
     const fullyPaid = alreadyPaid + dto.amount >= totalAmount - 0.001;
-    await this.invoiceRepository.updateStatus(invoiceId, fullyPaid ? 'paid' : 'partially_paid');
 
-    const booking = (await this.bookingRepository.findById(invoice.bookingId)) as { status: string } | null;
-    if (booking?.status === WorkflowStage.Invoiced) {
-      await this.workflowEngine.transition(invoice.bookingId, WorkflowStage.Paid, actorId, dto.reason);
-    }
-    if (fullyPaid) {
-      await this.workflowEngine.transition(invoice.bookingId, WorkflowStage.Completed, actorId, dto.reason);
-    }
+    const payment = await this.prisma.$transaction(async (tx) => {
+      const created = await this.paymentRepository.createWithReceipt(
+        {
+          invoiceId,
+          amount: dto.amount,
+          currencyCode: invoice.currencyCode,
+          paymentMethod: dto.paymentMethod,
+          reference: dto.reference,
+          receivedBy: actorId,
+          receiptNumber: generateReceiptNumber(),
+        },
+        tx,
+      );
+
+      await this.invoiceRepository.updateStatus(invoiceId, fullyPaid ? 'paid' : 'partially_paid', tx);
+
+      const booking = (await this.bookingRepository.findByIdInTransaction(invoice.bookingId, tx)) as {
+        status: string;
+      } | null;
+      if (booking?.status === WorkflowStage.Invoiced) {
+        await this.workflowEngine.transition(invoice.bookingId, WorkflowStage.Paid, actorId, dto.reason, tx);
+      }
+      if (fullyPaid) {
+        await this.workflowEngine.transition(invoice.bookingId, WorkflowStage.Completed, actorId, dto.reason, tx);
+      }
+
+      return created;
+    });
 
     return toPaymentResponse(payment as unknown as Record<string, unknown>);
   }

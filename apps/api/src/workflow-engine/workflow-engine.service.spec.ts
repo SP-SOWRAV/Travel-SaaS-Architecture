@@ -45,13 +45,16 @@ describe('WorkflowEngineService', () => {
       where: { id: BOOKING_ID },
       data: { status: 'reserved' },
     });
-    expect(transitionHistory.record).toHaveBeenCalledWith({
-      bookingId: BOOKING_ID,
-      fromStage: 'draft',
-      toStage: WorkflowStage.Reserved,
-      actorId: ACTOR_ID,
-      reason: undefined,
-    });
+    expect(transitionHistory.record).toHaveBeenCalledWith(
+      {
+        bookingId: BOOKING_ID,
+        fromStage: 'draft',
+        toStage: WorkflowStage.Reserved,
+        actorId: ACTOR_ID,
+        reason: undefined,
+      },
+      undefined,
+    );
     expect(result).toEqual({ id: BOOKING_ID, status: 'reserved' });
   });
 

@@ -4,6 +4,7 @@ import { WorkflowStage } from '@project/shared-types';
 import { BranchService } from '../../branch/branch.service';
 import { CustomerService } from '../../customer/customer.service';
 import { SettingsService } from '../../settings/settings.service';
+import { PrismaService } from '../../../core/database/prisma.service';
 import { TenantContextService } from '../../../core/tenant/tenant-context.service';
 import { WorkflowEngineService } from '../../../workflow-engine/workflow-engine.service';
 import { TransitionHistoryService } from '../../../workflow-engine/transition-history.service';
@@ -34,6 +35,7 @@ function toBookingAggregateResponse(booking: Record<string, unknown>) {
 @Injectable()
 export class BookingService {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly bookingRepository: BookingRepository,
     private readonly customerService: CustomerService,
     private readonly branchService: BranchService,
@@ -166,34 +168,41 @@ export class BookingService {
 
   // Populates every passenger's Ticket (T33 placeholder) with a real number, using
   // Settings -> Ticket Prefix (T15), then transitions the booking to Ticket Issued.
+  // H2 hardening: every ticket write plus the Workflow Engine's booking-status update now
+  // commit as one Prisma transaction (CODING_STANDARDS §5) — a crash partway through the
+  // per-passenger loop previously could leave some tickets numbered while the booking
+  // stayed at Reserved, an inconsistent state with no way to resume or roll back.
   async issueTicket(bookingId: string, reason?: string) {
     await this.requireOwnBooking(bookingId);
     const actorId = this.tenantContext.requireUserId();
     const settings = await this.settingsService.getSettings();
 
-    const passengers = await this.bookingRepository.findPassengers(bookingId);
-    const existingTickets = await this.bookingRepository.findTickets(bookingId);
+    await this.prisma.$transaction(async (tx) => {
+      const passengers = await this.bookingRepository.findPassengers(bookingId);
+      const existingTickets = await this.bookingRepository.findTickets(bookingId, tx);
 
-    for (const passenger of passengers as { id: string }[]) {
-      const hasTicket = (existingTickets as { passengerId: string }[]).some(
-        (ticket) => ticket.passengerId === passenger.id,
-      );
-      if (!hasTicket) {
-        await this.bookingRepository.createTicket(bookingId, passenger.id);
+      for (const passenger of passengers as { id: string }[]) {
+        const hasTicket = (existingTickets as { passengerId: string }[]).some(
+          (ticket) => ticket.passengerId === passenger.id,
+        );
+        if (!hasTicket) {
+          await this.bookingRepository.createTicket(bookingId, passenger.id, tx);
+        }
       }
-    }
 
-    const tickets = (await this.bookingRepository.findTickets(bookingId)) as {
-      id: string;
-      ticketNumber: string | null;
-    }[];
-    for (const ticket of tickets) {
-      if (!ticket.ticketNumber) {
-        await this.bookingRepository.issueTicket(ticket.id, generateTicketNumber(settings.ticketPrefix));
+      const tickets = (await this.bookingRepository.findTickets(bookingId, tx)) as {
+        id: string;
+        ticketNumber: string | null;
+      }[];
+      for (const ticket of tickets) {
+        if (!ticket.ticketNumber) {
+          await this.bookingRepository.issueTicket(ticket.id, generateTicketNumber(settings.ticketPrefix), tx);
+        }
       }
-    }
 
-    await this.workflowEngine.transition(bookingId, WorkflowStage.TicketIssued, actorId, reason);
+      await this.workflowEngine.transition(bookingId, WorkflowStage.TicketIssued, actorId, reason, tx);
+    });
+
     return this.getAggregate(bookingId);
   }
 

@@ -36,6 +36,18 @@ export class BookingRepository extends BaseRepository<Prisma.BookingDelegate> {
     super(prisma.booking, tenantCtx, true);
   }
 
+  // H2 hardening: tenant-scoped booking status read that can run inside a caller-supplied
+  // transaction (PaymentService.recordPayment, RefundService.processRefund) so the read
+  // that decides whether to invoke the Workflow Engine is part of the same atomic unit as
+  // the Payment/Refund row and the transition it triggers. Falls back to the plain client
+  // for a standalone call, same as the other repositories' H2 tx-aware methods.
+  findByIdInTransaction(id: string, tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    return client.booking.findFirst({
+      where: { id, tenantId: this.tenantCtx.requireTenantId(), deletedAt: null },
+    });
+  }
+
   // T32: creates the Booking plus every nested Passenger/Sector/Fare/Tax in one DB
   // transaction — any failure (bad FK, invalid index reference) throws and Prisma rolls
   // back everything created so far in this call.
@@ -232,17 +244,24 @@ export class BookingRepository extends BaseRepository<Prisma.BookingDelegate> {
     return this.prisma.tax.delete({ where: { id: taxId } });
   }
 
-  findTickets(bookingId: string) {
-    return this.prisma.ticket.findMany({ where: { bookingId }, orderBy: { createdAt: 'asc' } });
+  // H2 hardening: findTickets/createTicket/issueTicket all accept the caller's transaction
+  // client so BookingService.issueTicket's per-passenger ticket writes and the Workflow
+  // Engine's booking-status update commit as one atomic unit — a crash mid-loop previously
+  // could leave some tickets numbered and the booking still stuck at Reserved.
+  findTickets(bookingId: string, tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    return client.ticket.findMany({ where: { bookingId }, orderBy: { createdAt: 'asc' } });
   }
 
-  createTicket(bookingId: string, passengerId: string) {
-    return this.prisma.ticket.create({ data: { bookingId, passengerId } });
+  createTicket(bookingId: string, passengerId: string, tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    return client.ticket.create({ data: { bookingId, passengerId } });
   }
 
   // T39: populates the placeholder (T33) with a real number on the Issue Ticket transition.
-  issueTicket(ticketId: string, ticketNumber: string) {
-    return this.prisma.ticket.update({
+  issueTicket(ticketId: string, ticketNumber: string, tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    return client.ticket.update({
       where: { id: ticketId },
       data: { ticketNumber, status: 'issued', issuedAt: new Date() },
     });

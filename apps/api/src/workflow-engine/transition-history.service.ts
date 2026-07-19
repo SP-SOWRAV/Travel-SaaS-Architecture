@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, WorkflowTransition } from '@prisma/client';
+import { BookingStatus, Prisma, WorkflowTransition } from '@prisma/client';
 import { WorkflowStage } from '@project/shared-types';
 import { PrismaService } from '../core/database/prisma.service';
 import { TenantContextService } from '../core/tenant/tenant-context.service';
+
+type PrismaTransactionClient = Prisma.TransactionClient;
 
 export interface RecordTransitionInput {
   bookingId: string;
@@ -27,8 +29,13 @@ export class TransitionHistoryService {
     private readonly tenantContext: TenantContextService,
   ) {}
 
-  record(input: RecordTransitionInput): Promise<WorkflowTransition> {
-    return this.prisma.workflowTransition.create({
+  // H2 hardening: accepts the caller's transaction client so this write commits or rolls
+  // back as one unit with whatever business row (Booking, Payment, Refund) prompted it,
+  // per CODING_STANDARDS §5 ("wrap their repository calls in a single Prisma
+  // transaction, initiated at the Service layer"). Falls back to the plain client for a
+  // standalone call outside a larger transaction.
+  record(input: RecordTransitionInput, tx?: PrismaTransactionClient): Promise<WorkflowTransition> {
+    return (tx ?? this.prisma).workflowTransition.create({
       data: {
         bookingId: input.bookingId,
         fromStage: input.fromStage as BookingStatus | null,

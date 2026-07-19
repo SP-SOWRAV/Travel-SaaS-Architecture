@@ -4,6 +4,7 @@ import { InvalidWorkflowTransitionException } from '../../../core/filters/except
 import { BookingRepository } from '../../flight-booking/booking/booking.repository';
 import { InvoiceRepository } from '../invoice/invoice.repository';
 import { PaymentRepository } from '../payment/payment.repository';
+import { PrismaService } from '../../../core/database/prisma.service';
 import { TenantContextService } from '../../../core/tenant/tenant-context.service';
 import { WorkflowEngineService } from '../../../workflow-engine/workflow-engine.service';
 import { CreateRefundDto } from './dto/create-refund.dto';
@@ -23,6 +24,7 @@ function toRefundResponse(refund: Record<string, unknown>) {
 @Injectable()
 export class RefundService {
   constructor(
+    private readonly prisma: PrismaService,
     private readonly refundRepository: RefundRepository,
     private readonly invoiceRepository: InvoiceRepository,
     private readonly paymentRepository: PaymentRepository,
@@ -72,16 +74,28 @@ export class RefundService {
     }
 
     const actorId = this.tenantContext.requireUserId();
-    const refund = await this.refundRepository.createWithTransaction({
-      invoiceId,
-      paymentId: dto.paymentId,
-      amount: dto.amount,
-      currencyCode: invoice.currencyCode,
-      reason: dto.reason,
-      processedBy: actorId,
-    });
 
-    await this.workflowEngine.transition(invoice.bookingId, WorkflowStage.Refunded, actorId, dto.reason);
+    // H2 hardening: the Refund/Transaction row and the Workflow Engine's booking-status
+    // update now commit as one Prisma transaction (CODING_STANDARDS §5) — previously these
+    // were separate statements, so a crash between them could leave a refund recorded but
+    // the booking still showing Paid/Completed instead of Refunded.
+    const refund = await this.prisma.$transaction(async (tx) => {
+      const created = await this.refundRepository.createWithTransaction(
+        {
+          invoiceId,
+          paymentId: dto.paymentId,
+          amount: dto.amount,
+          currencyCode: invoice.currencyCode,
+          reason: dto.reason,
+          processedBy: actorId,
+        },
+        tx,
+      );
+
+      await this.workflowEngine.transition(invoice.bookingId, WorkflowStage.Refunded, actorId, dto.reason, tx);
+
+      return created;
+    });
 
     return toRefundResponse(refund as unknown as Record<string, unknown>);
   }

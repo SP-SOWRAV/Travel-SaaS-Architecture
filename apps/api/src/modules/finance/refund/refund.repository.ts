@@ -4,6 +4,8 @@ import { BaseRepository } from '../../../core/repository/base.repository';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { TenantContextService } from '../../../core/tenant/tenant-context.service';
 
+type PrismaTransactionClient = Prisma.TransactionClient;
+
 export interface CreateRefundInput {
   invoiceId: string;
   paymentId?: string;
@@ -23,12 +25,14 @@ export class RefundRepository extends BaseRepository<Prisma.RefundDelegate> {
   }
 
   // DATABASE.md §9/§3.20: every refund produces exactly one Transaction row (signed
-  // negative), written inside the same DB transaction as the Refund it logs.
-  async createWithTransaction(input: CreateRefundInput) {
+  // negative), written inside the same DB transaction as the Refund it logs. H2
+  // hardening: also accepts the caller's transaction client so this commits atomically
+  // with the Workflow Engine's booking-status update (RefundService.processRefund).
+  async createWithTransaction(input: CreateRefundInput, tx?: PrismaTransactionClient) {
     const tenantId = this.tenantCtx.requireTenantId();
 
-    const refundId = await this.prisma.$transaction(async (tx) => {
-      const refund = await tx.refund.create({
+    const create = async (client: PrismaTransactionClient) => {
+      const refund = await client.refund.create({
         data: {
           tenantId,
           invoiceId: input.invoiceId,
@@ -40,7 +44,7 @@ export class RefundRepository extends BaseRepository<Prisma.RefundDelegate> {
         },
       });
 
-      await tx.transaction.create({
+      await client.transaction.create({
         data: {
           tenantId,
           type: 'refund',
@@ -53,9 +57,11 @@ export class RefundRepository extends BaseRepository<Prisma.RefundDelegate> {
       });
 
       return refund.id;
-    });
+    };
 
-    return this.findById(refundId);
+    const refundId = tx ? await create(tx) : await this.prisma.$transaction(create);
+    const readClient = tx ?? this.prisma;
+    return readClient.refund.findFirst({ where: { id: refundId, tenantId } });
   }
 
   findByInvoiceId(invoiceId: string) {

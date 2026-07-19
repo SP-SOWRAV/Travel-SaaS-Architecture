@@ -4,6 +4,8 @@ import { BaseRepository } from '../../../core/repository/base.repository';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { TenantContextService } from '../../../core/tenant/tenant-context.service';
 
+type PrismaTransactionClient = Prisma.TransactionClient;
+
 export interface CreatePaymentInput {
   invoiceId: string;
   amount: number;
@@ -25,11 +27,17 @@ export class PaymentRepository extends BaseRepository<Prisma.PaymentDelegate> {
     super(prisma.payment, tenantCtx);
   }
 
-  async createWithReceipt(input: CreatePaymentInput) {
+  // H2 hardening: accepts the caller's transaction client so Payment+Receipt+Transaction
+  // creation commits atomically with the Invoice status update and the Workflow Engine's
+  // booking-status update that always accompany a payment (PaymentService.recordPayment) —
+  // previously only this inner create was atomic; the invoice/booking updates were
+  // separate, independently-committing statements. Falls back to opening its own
+  // transaction for a standalone call.
+  async createWithReceipt(input: CreatePaymentInput, tx?: PrismaTransactionClient) {
     const tenantId = this.tenantCtx.requireTenantId();
 
-    const paymentId = await this.prisma.$transaction(async (tx) => {
-      const payment = await tx.payment.create({
+    const create = async (client: PrismaTransactionClient) => {
+      const payment = await client.payment.create({
         data: {
           tenantId,
           invoiceId: input.invoiceId,
@@ -41,7 +49,7 @@ export class PaymentRepository extends BaseRepository<Prisma.PaymentDelegate> {
         },
       });
 
-      await tx.receipt.create({
+      await client.receipt.create({
         data: {
           tenantId,
           paymentId: payment.id,
@@ -52,7 +60,7 @@ export class PaymentRepository extends BaseRepository<Prisma.PaymentDelegate> {
       // DATABASE.md §9/§3.20: every payment produces exactly one Transaction row, written
       // inside the same DB transaction as the Payment it logs — signed positive for a
       // payment (negative is reserved for Refund, RefundRepository.createWithTransaction).
-      await tx.transaction.create({
+      await client.transaction.create({
         data: {
           tenantId,
           type: 'payment',
@@ -65,9 +73,14 @@ export class PaymentRepository extends BaseRepository<Prisma.PaymentDelegate> {
       });
 
       return payment.id;
-    });
+    };
 
-    return this.findWithReceipt(paymentId);
+    const paymentId = tx ? await create(tx) : await this.prisma.$transaction(create);
+    const readClient = tx ?? this.prisma;
+    return readClient.payment.findFirst({
+      where: { id: paymentId, tenantId },
+      include: { receipt: true },
+    });
   }
 
   findWithReceipt(id: string) {

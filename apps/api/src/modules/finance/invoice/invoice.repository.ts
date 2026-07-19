@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BaseRepository } from '../../../core/repository/base.repository';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { TenantContextService } from '../../../core/tenant/tenant-context.service';
+
+type PrismaTransactionClient = Prisma.TransactionClient;
 
 export interface CreateInvoiceLineInput {
   description: string;
@@ -85,8 +87,19 @@ export class InvoiceRepository extends BaseRepository<Prisma.InvoiceDelegate> {
   // T42: Payment recording is what drives an Invoice's own document-level status
   // (issued -> partially_paid -> paid) — a distinct enum from booking lifecycle
   // (DATABASE.md §8), so this is a plain field update, not a Workflow Engine call.
-  updateStatus(id: string, status: string) {
-    return this.delegate.update({
+  // H2 hardening: takes the caller's transaction client so this commits atomically with
+  // the Payment/Refund row and the Workflow Engine's own booking-status update, and
+  // verifies tenant ownership directly (it previously called the raw delegate, bypassing
+  // BaseRepository's tenant check — safe only because its one caller had already looked
+  // the invoice up first, the same "conventional not structural" gap T50 fixed elsewhere).
+  async updateStatus(id: string, status: string, tx?: PrismaTransactionClient) {
+    const client = tx ?? this.prisma;
+    const tenantId = this.tenantCtx.requireTenantId();
+    const existing = await client.invoice.findFirst({ where: { id, tenantId } });
+    if (!existing) {
+      throw new NotFoundException('Invoice not found');
+    }
+    return client.invoice.update({
       where: { id },
       data: { status: status as Prisma.InvoiceUncheckedUpdateInput['status'] },
     });
