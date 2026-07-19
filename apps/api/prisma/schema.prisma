@@ -29,6 +29,8 @@ model Agency {
   customers Customer[]
   bookings  Booking[]
   invoices  Invoice[]
+  payments  Payment[]
+  receipts  Receipt[]
 
   @@map("agencies")
 }
@@ -62,6 +64,7 @@ model User {
   bookingsAsAgent Booking[]
   remarksCreated  Remark[]
   workflowTransitionsAsActor WorkflowTransition[]
+  paymentsReceived Payment[]
 
   @@index([tenantId])
   @@index([tenantId, role])
@@ -470,6 +473,7 @@ model Invoice {
   agency Agency        @relation(fields: [tenantId], references: [id])
   booking Booking      @relation(fields: [bookingId], references: [id])
   lines  InvoiceLine[]
+  payments Payment[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
@@ -491,4 +495,55 @@ model InvoiceLine {
 
   @@index([invoiceId])
   @@map("invoice_lines")
+}
+
+// A payment received against an invoice (DATABASE.md §3.17); drives the Paid/Completed
+// transitions (T42). Owns Receipt as its direct 1:1 sub-entity (CODING_STANDARDS §4),
+// same aggregate pattern as Booking owning its sub-entities.
+enum PaymentMethod {
+  cash
+  card
+  bank_transfer
+  other
+
+  @@map("payment_method")
+}
+
+model Payment {
+  id            String        @id @default(uuid()) @db.Uuid
+  tenantId      String        @map("tenant_id") @db.Uuid
+  invoiceId     String        @map("invoice_id") @db.Uuid
+  amount        Decimal       @db.Decimal(12, 2)
+  currencyCode  String        @map("currency_code") @db.Char(3)
+  paymentMethod PaymentMethod @map("payment_method")
+  reference     String?       @db.VarChar(100)
+  receivedBy    String        @map("received_by") @db.Uuid
+  paidAt        DateTime      @default(now()) @map("paid_at") @db.Timestamptz
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  agency  Agency   @relation(fields: [tenantId], references: [id])
+  invoice Invoice  @relation(fields: [invoiceId], references: [id])
+  receiver User    @relation(fields: [receivedBy], references: [id])
+  receipt Receipt?
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+// Proof-of-payment document issued to the customer for a payment (DATABASE.md §3.18) —
+// 1:1 with Payment, no soft delete (financial documents are permanent, DATABASE.md §4).
+model Receipt {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  paymentId     String   @unique @map("payment_id") @db.Uuid
+  receiptNumber String   @map("receipt_number") @db.VarChar(30)
+  issuedAt      DateTime @default(now()) @map("issued_at") @db.Timestamptz
+
+  agency  Agency  @relation(fields: [tenantId], references: [id])
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@unique([tenantId, receiptNumber])
+  @@index([tenantId])
+  @@map("receipts")
 }

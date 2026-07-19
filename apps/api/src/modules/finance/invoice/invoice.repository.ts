@@ -81,4 +81,14 @@ export class InvoiceRepository extends BaseRepository<Prisma.InvoiceDelegate> {
       where: { bookingId, tenantId: this.tenantCtx.requireTenantId() },
     });
   }
+
+  // T42: Payment recording is what drives an Invoice's own document-level status
+  // (issued -> partially_paid -> paid) — a distinct enum from booking lifecycle
+  // (DATABASE.md §8), so this is a plain field update, not a Workflow Engine call.
+  updateStatus(id: string, status: string) {
+    return this.delegate.update({
+      where: { id },
+      data: { status: status as Prisma.InvoiceUncheckedUpdateInput['status'] },
+    });
+  }
 }
