@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Airline, Prisma } from '@prisma/client';
+import { PaginatedResult } from '../../core/pagination/pagination';
 import { AirlineRepository } from './airline.repository';
 import { CreateAirlineDto } from './dto/create-airline.dto';
 import { UpdateAirlineDto } from './dto/update-airline.dto';
@@ -12,8 +13,8 @@ function isUniqueViolation(err: unknown): boolean {
 export class AirlineService {
   constructor(private readonly airlineRepository: AirlineRepository) {}
 
-  async list(): Promise<Airline[]> {
-    return (await this.airlineRepository.findMany({ orderBy: { iataCode: 'asc' } })) as Airline[];
+  async list(page: number, pageSize: number): Promise<PaginatedResult<Airline>> {
+    return this.airlineRepository.paginate<Airline>({ orderBy: { iataCode: 'asc' }, page, pageSize });
   }
 
   async getById(id: string): Promise<Airline> {

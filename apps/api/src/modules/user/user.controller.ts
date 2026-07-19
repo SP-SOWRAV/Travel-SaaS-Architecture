@@ -8,10 +8,12 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
+import { normalizePagination } from '../../core/pagination/pagination';
 import { Roles } from '../../core/auth/roles.decorator';
 import { RolesGuard } from '../../core/auth/roles.guard';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -24,9 +26,9 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  async list() {
-    const users = await this.userService.list();
-    return { data: users, meta: {} };
+  async list(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    const normalized = normalizePagination(page, pageSize);
+    return this.userService.list(normalized.page, normalized.pageSize);
   }
 
   @Get(':id')

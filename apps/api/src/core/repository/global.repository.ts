@@ -1,8 +1,11 @@
+import { buildMeta, PaginatedResult } from '../pagination/pagination';
+
 type WhereRecord = Record<string, unknown>;
 
 interface GlobalDelegate {
   findMany(args?: { where?: WhereRecord; [key: string]: unknown }): Promise<unknown[]>;
   findFirst(args?: { where?: WhereRecord; [key: string]: unknown }): Promise<unknown>;
+  count(args?: { where?: WhereRecord; [key: string]: unknown }): Promise<number>;
   create(args: { data: WhereRecord; [key: string]: unknown }): Promise<unknown>;
   update(args: { where: WhereRecord; data: WhereRecord }): Promise<unknown>;
 }
@@ -18,6 +21,20 @@ export abstract class GlobalRepository<TDelegate extends GlobalDelegate> {
 
   findMany(args: { where?: WhereRecord; [key: string]: unknown } = {}) {
     return this.delegate.findMany(args);
+  }
+
+  async paginate<T = unknown>(args: {
+    where?: WhereRecord;
+    orderBy?: unknown;
+    page: number;
+    pageSize: number;
+  }): Promise<PaginatedResult<T>> {
+    const skip = (args.page - 1) * args.pageSize;
+    const [data, totalItems] = await Promise.all([
+      this.delegate.findMany({ where: args.where, orderBy: args.orderBy, skip, take: args.pageSize }),
+      this.delegate.count({ where: args.where }),
+    ]);
+    return { data: data as T[], meta: buildMeta(args.page, args.pageSize, totalItems) };
   }
 
   findById(id: string) {

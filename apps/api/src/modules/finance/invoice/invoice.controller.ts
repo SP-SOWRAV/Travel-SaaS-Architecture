@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../core/auth/jwt-auth.guard';
+import { normalizePagination } from '../../../core/pagination/pagination';
 import { GenerateInvoiceDto } from './dto/generate-invoice.dto';
 import { InvoiceService } from './invoice.service';
 
@@ -18,9 +19,14 @@ export class InvoiceController {
   }
 
   @Get('invoices')
-  async list(@Query('status') status?: string, @Query('bookingId') bookingId?: string) {
-    const invoices = await this.invoiceService.list(status, bookingId);
-    return { data: invoices, meta: {} };
+  async list(
+    @Query('status') status?: string,
+    @Query('bookingId') bookingId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const normalized = normalizePagination(page, pageSize);
+    return this.invoiceService.list(status, bookingId, normalized.page, normalized.pageSize);
   }
 
   @Get('invoices/:id')

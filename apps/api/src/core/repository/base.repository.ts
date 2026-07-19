@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { TenantContextService } from '../tenant/tenant-context.service';
+import { buildMeta, PaginatedResult } from '../pagination/pagination';
 
 type WhereRecord = Record<string, unknown>;
 
@@ -34,6 +35,23 @@ export abstract class BaseRepository<TDelegate extends TenantScopedDelegate> {
   findMany(args: { where?: WhereRecord; [key: string]: unknown } = {}) {
     const { where, ...rest } = args;
     return this.delegate.findMany({ ...rest, where: this.scopedWhere(where) });
+  }
+
+  // API_RULES §8: every list endpoint returns this same { data, meta } shape — page/
+  // pageSize already normalized and clamped by the caller (core/pagination).
+  async paginate<T = unknown>(args: {
+    where?: WhereRecord;
+    orderBy?: unknown;
+    page: number;
+    pageSize: number;
+  }): Promise<PaginatedResult<T>> {
+    const scopedWhere = this.scopedWhere(args.where);
+    const skip = (args.page - 1) * args.pageSize;
+    const [data, totalItems] = await Promise.all([
+      this.delegate.findMany({ where: scopedWhere, orderBy: args.orderBy, skip, take: args.pageSize }),
+      this.delegate.count({ where: scopedWhere }),
+    ]);
+    return { data: data as T[], meta: buildMeta(args.page, args.pageSize, totalItems) };
   }
 
   findFirst(args: { where?: WhereRecord; [key: string]: unknown } = {}) {

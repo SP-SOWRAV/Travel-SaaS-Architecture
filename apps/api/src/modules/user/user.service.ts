@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
 import { HashService } from '../../core/auth/hash.service';
+import { PaginatedResult } from '../../core/pagination/pagination';
 import { BranchService } from '../branch/branch.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -59,11 +60,9 @@ export class UserService {
     }
   }
 
-  async list(): Promise<UserResponse[]> {
-    const users = (await this.userRepository.findMany({
-      orderBy: { createdAt: 'desc' },
-    })) as User[];
-    return users.map(toUserResponse);
+  async list(page: number, pageSize: number): Promise<PaginatedResult<UserResponse>> {
+    const result = await this.userRepository.paginate<User>({ orderBy: { createdAt: 'desc' }, page, pageSize });
+    return { data: result.data.map(toUserResponse), meta: result.meta };
   }
 
   async getById(id: string): Promise<UserResponse> {

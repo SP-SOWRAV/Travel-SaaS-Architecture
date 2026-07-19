@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Customer } from '@prisma/client';
+import { PaginatedResult } from '../../core/pagination/pagination';
 import { CustomerRepository } from './customer.repository';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
@@ -30,7 +31,7 @@ export class CustomerService {
 
   // API_RULES §11: free-text `q` scoped to fullName/email/phone, tenant-scoped implicitly
   // by the repository — never a full-text scan of every column.
-  async list(q?: string): Promise<CustomerResponse[]> {
+  async list(q: string | undefined, page: number, pageSize: number): Promise<PaginatedResult<CustomerResponse>> {
     const where = q
       ? {
           OR: [
@@ -40,11 +41,13 @@ export class CustomerService {
           ],
         }
       : undefined;
-    const customers = (await this.customerRepository.findMany({
+    const result = await this.customerRepository.paginate<Customer>({
       where,
       orderBy: { createdAt: 'desc' },
-    })) as Customer[];
-    return customers.map(toCustomerResponse);
+      page,
+      pageSize,
+    });
+    return { data: result.data.map(toCustomerResponse), meta: result.meta };
   }
 
   async getById(id: string): Promise<CustomerResponse> {

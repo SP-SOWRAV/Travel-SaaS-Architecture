@@ -131,7 +131,7 @@ export class BookingService {
   }
 
   // List view (TASKS.md T35) — summary rows only, no nested passengers/sectors/fares.
-  async list(status?: string, branchId?: string) {
+  async list(status: string | undefined, branchId: string | undefined, page: number, pageSize: number) {
     const where: Record<string, unknown> = {};
     if (status) {
       where.status = status;
@@ -139,11 +139,13 @@ export class BookingService {
     if (branchId) {
       where.branchId = branchId;
     }
-    const bookings = (await this.bookingRepository.findMany({
+    const result = await this.bookingRepository.paginate<Record<string, unknown>>({
       where,
       orderBy: { createdAt: 'desc' },
-    })) as Record<string, unknown>[];
-    return bookings.map(toBookingAggregateResponse);
+      page,
+      pageSize,
+    });
+    return { data: result.data.map(toBookingAggregateResponse), meta: result.meta };
   }
 
   // T39: real lifecycle endpoints — each delegates to the Workflow Engine (T38) instead of

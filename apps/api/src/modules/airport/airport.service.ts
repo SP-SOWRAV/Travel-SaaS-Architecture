@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { Airport, Prisma } from '@prisma/client';
+import { PaginatedResult } from '../../core/pagination/pagination';
 import { AirportRepository } from './airport.repository';
 import { CreateAirportDto } from './dto/create-airport.dto';
 import { UpdateAirportDto } from './dto/update-airport.dto';
@@ -16,8 +17,8 @@ function isForeignKeyViolation(err: unknown): boolean {
 export class AirportService {
   constructor(private readonly airportRepository: AirportRepository) {}
 
-  async list(): Promise<Airport[]> {
-    return (await this.airportRepository.findMany({ orderBy: { iataCode: 'asc' } })) as Airport[];
+  async list(page: number, pageSize: number): Promise<PaginatedResult<Airport>> {
+    return this.airportRepository.paginate<Airport>({ orderBy: { iataCode: 'asc' }, page, pageSize });
   }
 
   async getById(id: string): Promise<Airport> {

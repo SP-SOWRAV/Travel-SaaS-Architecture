@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Branch, Prisma } from '@prisma/client';
+import { PaginatedResult } from '../../core/pagination/pagination';
 import { BranchRepository } from './branch.repository';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -33,11 +34,13 @@ function isDuplicateCodeError(err: unknown): boolean {
 export class BranchService {
   constructor(private readonly branchRepository: BranchRepository) {}
 
-  async list(): Promise<BranchResponse[]> {
-    const branches = (await this.branchRepository.findMany({
+  async list(page: number, pageSize: number): Promise<PaginatedResult<BranchResponse>> {
+    const result = await this.branchRepository.paginate<Branch>({
       orderBy: { createdAt: 'desc' },
-    })) as Branch[];
-    return branches.map(toBranchResponse);
+      page,
+      pageSize,
+    });
+    return { data: result.data.map(toBranchResponse), meta: result.meta };
   }
 
   async getById(id: string): Promise<BranchResponse> {

@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
+import { normalizePagination } from '../../core/pagination/pagination';
 import { Roles } from '../../core/auth/roles.decorator';
 import { RolesGuard } from '../../core/auth/roles.guard';
 import { AirportService } from './airport.service';
@@ -15,9 +16,9 @@ export class AirportController {
   constructor(private readonly airportService: AirportService) {}
 
   @Get()
-  async list() {
-    const airports = await this.airportService.list();
-    return { data: airports, meta: {} };
+  async list(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    const normalized = normalizePagination(page, pageSize);
+    return this.airportService.list(normalized.page, normalized.pageSize);
   }
 
   @Get(':id')

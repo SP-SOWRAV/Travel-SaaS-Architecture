@@ -136,7 +136,7 @@ export class InvoiceService {
     return toInvoiceResponse(invoice as unknown as Record<string, unknown>);
   }
 
-  async list(status?: string, bookingId?: string) {
+  async list(status: string | undefined, bookingId: string | undefined, page: number, pageSize: number) {
     const where: Record<string, unknown> = {};
     if (status) {
       where.status = status;
@@ -144,10 +144,12 @@ export class InvoiceService {
     if (bookingId) {
       where.bookingId = bookingId;
     }
-    const invoices = (await this.invoiceRepository.findMany({
+    const result = await this.invoiceRepository.paginate<Record<string, unknown>>({
       where,
       orderBy: { createdAt: 'desc' },
-    })) as Record<string, unknown>[];
-    return invoices.map(toInvoiceResponse);
+      page,
+      pageSize,
+    });
+    return { data: result.data.map(toInvoiceResponse), meta: result.meta };
   }
 }

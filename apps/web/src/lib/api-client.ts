@@ -138,8 +138,11 @@ export type UpdateBranchInput = Partial<
   Pick<BranchResponse, 'name' | 'code' | 'addressLine1' | 'phone' | 'email' | 'isActive'>
 >;
 
+// API_RULES §8: pageSize=100 is the server's max — passed explicitly so this list keeps
+// today's "show everything" behavior for realistic data volumes now that the API
+// enforces pagination (Production Hardening, Critical finding).
 export function listBranches(accessToken: string): Promise<BranchResponse[]> {
-  return request<BranchResponse[]>('/api/v1/branches', {
+  return request<BranchResponse[]>('/api/v1/branches?pageSize=100', {
     headers: authHeaders(accessToken),
   });
 }
@@ -204,7 +207,7 @@ export type UpdateUserInput = Partial<
 >;
 
 export function listUsers(accessToken: string): Promise<UserResponse[]> {
-  return request<UserResponse[]>('/api/v1/users', {
+  return request<UserResponse[]>('/api/v1/users?pageSize=100', {
     headers: authHeaders(accessToken),
   });
 }
@@ -282,8 +285,11 @@ export type UpdateCustomerInput = Partial<
 >;
 
 export function listCustomers(accessToken: string, q?: string): Promise<CustomerResponse[]> {
-  const query = q ? `?q=${encodeURIComponent(q)}` : '';
-  return request<CustomerResponse[]>(`/api/v1/customers${query}`, {
+  const params = new URLSearchParams({ pageSize: '100' });
+  if (q) {
+    params.set('q', q);
+  }
+  return request<CustomerResponse[]>(`/api/v1/customers?${params.toString()}`, {
     headers: authHeaders(accessToken),
   });
 }
@@ -322,7 +328,7 @@ export interface AirlineResponse {
 }
 
 export function listAirlines(accessToken: string): Promise<AirlineResponse[]> {
-  return request<AirlineResponse[]>('/api/v1/airlines', {
+  return request<AirlineResponse[]>('/api/v1/airlines?pageSize=100', {
     headers: authHeaders(accessToken),
   });
 }
@@ -339,7 +345,7 @@ export interface AirportResponse {
 }
 
 export function listAirports(accessToken: string): Promise<AirportResponse[]> {
-  return request<AirportResponse[]>('/api/v1/airports', {
+  return request<AirportResponse[]>('/api/v1/airports?pageSize=100', {
     headers: authHeaders(accessToken),
   });
 }
@@ -470,15 +476,14 @@ export function listBookings(
   accessToken: string,
   filters: { status?: string; branchId?: string } = {},
 ): Promise<BookingSummaryResponse[]> {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ pageSize: '100' });
   if (filters.status) {
     params.set('status', filters.status);
   }
   if (filters.branchId) {
     params.set('branchId', filters.branchId);
   }
-  const query = params.toString() ? `?${params.toString()}` : '';
-  return request<BookingSummaryResponse[]>(`/api/v1/bookings${query}`, {
+  return request<BookingSummaryResponse[]>(`/api/v1/bookings?${params.toString()}`, {
     headers: authHeaders(accessToken),
   });
 }
@@ -581,15 +586,14 @@ export function listInvoices(
   accessToken: string,
   filters: { status?: string; bookingId?: string } = {},
 ): Promise<InvoiceResponse[]> {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ pageSize: '100' });
   if (filters.status) {
     params.set('status', filters.status);
   }
   if (filters.bookingId) {
     params.set('bookingId', filters.bookingId);
   }
-  const query = params.toString() ? `?${params.toString()}` : '';
-  return request<InvoiceResponse[]>(`/api/v1/invoices${query}`, {
+  return request<InvoiceResponse[]>(`/api/v1/invoices?${params.toString()}`, {
     headers: authHeaders(accessToken),
   });
 }
@@ -802,15 +806,14 @@ export function listActivityLog(
   accessToken: string,
   filters: { entityType?: string; action?: string } = {},
 ): Promise<ActivityLogResponse[]> {
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ pageSize: '100' });
   if (filters.entityType) {
     params.set('entityType', filters.entityType);
   }
   if (filters.action) {
     params.set('action', filters.action);
   }
-  const query = params.toString() ? `?${params.toString()}` : '';
-  return request<ActivityLogResponse[]>(`/api/v1/activity-log${query}`, {
+  return request<ActivityLogResponse[]>(`/api/v1/activity-log?${params.toString()}`, {
     headers: authHeaders(accessToken),
   });
 }

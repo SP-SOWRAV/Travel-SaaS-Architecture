@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../../core/auth/jwt-auth.guard';
+import { normalizePagination } from '../../core/pagination/pagination';
 import { Roles } from '../../core/auth/roles.decorator';
 import { RolesGuard } from '../../core/auth/roles.guard';
 import { CustomerService } from './customer.service';
@@ -25,9 +26,9 @@ export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
   @Get()
-  async list(@Query('q') q?: string) {
-    const customers = await this.customerService.list(q);
-    return { data: customers, meta: {} };
+  async list(@Query('q') q?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    const normalized = normalizePagination(page, pageSize);
+    return this.customerService.list(q, normalized.page, normalized.pageSize);
   }
 
   @Get(':id')

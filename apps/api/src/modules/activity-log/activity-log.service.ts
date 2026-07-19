@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ActivityLog } from '@prisma/client';
+import { PaginatedResult } from '../../core/pagination/pagination';
 import { ActivityLogRepository } from './activity-log.repository';
 
 export interface ActivityLogResponse {
@@ -24,7 +25,11 @@ function toActivityLogResponse(log: ActivityLog): ActivityLogResponse {
 export class ActivityLogService {
   constructor(private readonly activityLogRepository: ActivityLogRepository) {}
 
-  async list(filters: { entityType?: string; action?: string }): Promise<ActivityLogResponse[]> {
+  async list(
+    filters: { entityType?: string; action?: string },
+    page: number,
+    pageSize: number,
+  ): Promise<PaginatedResult<ActivityLogResponse>> {
     const where: Record<string, unknown> = {};
     if (filters.entityType) {
       where.entityType = filters.entityType;
@@ -32,11 +37,12 @@ export class ActivityLogService {
     if (filters.action) {
       where.action = filters.action;
     }
-    const logs = (await this.activityLogRepository.findMany({
+    const result = await this.activityLogRepository.paginate<ActivityLog>({
       where,
       orderBy: { createdAt: 'desc' },
-      take: 100,
-    })) as ActivityLog[];
-    return logs.map(toActivityLogResponse);
+      page,
+      pageSize,
+    });
+    return { data: result.data.map(toActivityLogResponse), meta: result.meta };
   }
 }
