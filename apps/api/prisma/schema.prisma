@@ -34,6 +34,7 @@ model Agency {
   refunds   Refund[]
   transactions Transaction[]
   activityLogs ActivityLog[]
+  idempotencyKeys IdempotencyKey[]
 
   @@map("agencies")
 }
@@ -639,4 +640,25 @@ model ActivityLog {
   @@index([tenantId, createdAt])
   @@index([metadata], type: Gin)
   @@map("activity_logs")
+}
+
+// API_RULES §16: an Idempotency-Key header on Workflow Engine actions and Finance
+// mutations — the server stores the resulting response keyed by (tenant, key) so a
+// retried request returns the original result instead of re-executing (preventing a
+// duplicate payment/ticket/invoice on a network retry). Scoped per-Agency, expiring
+// after a bounded window (§16's own recommendation: 24 hours).
+model IdempotencyKey {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  key          String   @db.VarChar(255)
+  statusCode   Int      @map("status_code")
+  responseBody Json     @map("response_body") @db.JsonB
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz
+
+  agency Agency @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
 }

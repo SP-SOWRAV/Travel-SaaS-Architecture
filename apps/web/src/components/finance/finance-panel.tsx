@@ -11,6 +11,7 @@ import {
   listPaymentsForInvoice,
   listRefundsForInvoice,
 } from '../../lib/api-client';
+import { useIdempotencyKey } from '../../lib/idempotency-key';
 import { InvoiceStatusBadge } from './invoice-status-badge';
 import { PaymentForm } from './payment-form';
 import { RefundForm } from './refund-form';
@@ -34,6 +35,7 @@ export function FinancePanel({ accessToken, bookingId, bookingStatus, currencyCo
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const generateInvoiceKey = useIdempotencyKey();
 
   const load = useCallback(async () => {
     const invoices = await listInvoices(accessToken, { bookingId });
@@ -60,7 +62,8 @@ export function FinancePanel({ accessToken, bookingId, bookingStatus, currencyCo
     setError(null);
     setGenerating(true);
     try {
-      await generateInvoice(accessToken, bookingId);
+      await generateInvoice(accessToken, bookingId, undefined, generateInvoiceKey.getKey());
+      generateInvoiceKey.resetKey();
       await load();
       onBookingChanged();
     } catch (err) {

@@ -7,6 +7,8 @@ import { JwtService } from './auth/jwt.service';
 import { JwtStrategy } from './auth/jwt.strategy';
 import { PrismaService } from './database/prisma.service';
 import { TenantContextService } from './tenant/tenant-context.service';
+import { IdempotencyService } from './idempotency/idempotency.service';
+import { IdempotencyInterceptor } from './idempotency/idempotency.interceptor';
 
 /**
  * Single source for services shared across feature modules (PrismaService, HashService,
@@ -26,7 +28,16 @@ import { TenantContextService } from './tenant/tenant-context.service';
       }),
     }),
   ],
-  providers: [PrismaService, TenantContextService, HashService, JwtService, JwtStrategy],
-  exports: [PrismaService, TenantContextService, HashService, JwtService, JwtModule, PassportModule],
+  providers: [PrismaService, TenantContextService, HashService, JwtService, JwtStrategy, IdempotencyService, IdempotencyInterceptor],
+  exports: [
+    PrismaService,
+    TenantContextService,
+    HashService,
+    JwtService,
+    JwtModule,
+    PassportModule,
+    IdempotencyService,
+    IdempotencyInterceptor,
+  ],
 })
 export class CoreModule {}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ApiRequestError, processRefund, RefundResponse } from '../../lib/api-client';
+import { useIdempotencyKey } from '../../lib/idempotency-key';
 
 interface RefundFormProps {
   accessToken: string;
@@ -28,6 +29,7 @@ export function RefundForm({
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const idempotencyKey = useIdempotencyKey();
 
   const handleSubmit = async () => {
     const parsedAmount = Number(amount);
@@ -42,10 +44,16 @@ export function RefundForm({
     setError(null);
     setBusy(true);
     try {
-      const refund = await processRefund(accessToken, invoiceId, {
-        amount: parsedAmount,
-        reason: reason.trim(),
-      });
+      const refund = await processRefund(
+        accessToken,
+        invoiceId,
+        {
+          amount: parsedAmount,
+          reason: reason.trim(),
+        },
+        idempotencyKey.getKey(),
+      );
+      idempotencyKey.resetKey();
       onProcessed(refund);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.apiError.message : 'Failed to process refund');

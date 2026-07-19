@@ -9,6 +9,7 @@ import {
   issueTicketForBooking,
   reserveBooking,
 } from '../../lib/api-client';
+import { useIdempotencyKey } from '../../lib/idempotency-key';
 
 interface StatusActionsProps {
   accessToken: string;
@@ -23,6 +24,9 @@ export function StatusActions({ accessToken, booking, onUpdated }: StatusActions
   const [error, setError] = useState<string | null>(null);
   const [showCancelForm, setShowCancelForm] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const reserveKey = useIdempotencyKey();
+  const issueTicketKey = useIdempotencyKey();
+  const cancelKey = useIdempotencyKey();
 
   const currentStage = booking.status as WorkflowStage;
   const allowedNext = WORKFLOW_TRANSITIONS[currentStage] ?? [];
@@ -31,11 +35,16 @@ export function StatusActions({ accessToken, booking, onUpdated }: StatusActions
   const canIssueTicket = allowedNext.includes(WorkflowStage.TicketIssued);
   const canCancel = allowedNext.includes(WorkflowStage.Cancelled);
 
-  const runAction = async (action: string, fn: () => Promise<BookingAggregateResponse>) => {
+  const runAction = async (
+    action: string,
+    keyHolder: ReturnType<typeof useIdempotencyKey>,
+    fn: (key: string) => Promise<BookingAggregateResponse>,
+  ) => {
     setError(null);
     setBusy(action);
     try {
-      const updated = await fn();
+      const updated = await fn(keyHolder.getKey());
+      keyHolder.resetKey();
       onUpdated(updated);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.apiError.message : 'Action failed');
@@ -51,7 +60,8 @@ export function StatusActions({ accessToken, booking, onUpdated }: StatusActions
     setError(null);
     setBusy('cancel');
     try {
-      const updated = await cancelBooking(accessToken, booking.id, cancelReason);
+      const updated = await cancelBooking(accessToken, booking.id, cancelReason, cancelKey.getKey());
+      cancelKey.resetKey();
       onUpdated(updated);
       setShowCancelForm(false);
       setCancelReason('');
@@ -79,7 +89,7 @@ export function StatusActions({ accessToken, booking, onUpdated }: StatusActions
           <button
             type="button"
             disabled={busy !== null}
-            onClick={() => runAction('reserve', () => reserveBooking(accessToken, booking.id))}
+            onClick={() => runAction('reserve', reserveKey, (key) => reserveBooking(accessToken, booking.id, undefined, key))}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {busy === 'reserve' ? 'Reserving…' : 'Reserve'}
@@ -89,7 +99,9 @@ export function StatusActions({ accessToken, booking, onUpdated }: StatusActions
           <button
             type="button"
             disabled={busy !== null}
-            onClick={() => runAction('issue-ticket', () => issueTicketForBooking(accessToken, booking.id))}
+            onClick={() =>
+              runAction('issue-ticket', issueTicketKey, (key) => issueTicketForBooking(accessToken, booking.id, undefined, key))
+            }
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {busy === 'issue-ticket' ? 'Issuing…' : 'Issue Ticket'}

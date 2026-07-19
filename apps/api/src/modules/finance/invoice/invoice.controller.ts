@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../core/auth/jwt-auth.guard';
+import { IdempotencyInterceptor } from '../../../core/idempotency/idempotency.interceptor';
 import { normalizePagination } from '../../../core/pagination/pagination';
 import { GenerateInvoiceDto } from './dto/generate-invoice.dto';
 import { InvoiceService } from './invoice.service';
@@ -12,7 +13,9 @@ import { InvoiceService } from './invoice.service';
 export class InvoiceController {
   constructor(private readonly invoiceService: InvoiceService) {}
 
+  // API_RULES §16: document-issuance action — Idempotency-Key protected.
   @Post('bookings/:bookingId/invoice')
+  @UseInterceptors(IdempotencyInterceptor)
   async generate(@Param('bookingId', ParseUUIDPipe) bookingId: string, @Body() dto: GenerateInvoiceDto) {
     const invoice = await this.invoiceService.generateFromBooking(bookingId, dto.reason);
     return { data: invoice, meta: {} };

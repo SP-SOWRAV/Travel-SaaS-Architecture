@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../core/auth/jwt-auth.guard';
+import { IdempotencyInterceptor } from '../../../core/idempotency/idempotency.interceptor';
 import { normalizePagination } from '../../../core/pagination/pagination';
 import { BookingService } from './booking.service';
 import { CancelBookingDto } from './dto/cancel-booking.dto';
@@ -35,19 +36,25 @@ export class BookingController {
     return { data: booking, meta: {} };
   }
 
+  // API_RULES §16: workflow-action endpoints get Idempotency-Key support — a retried
+  // request (e.g. after a client-side timeout) returns the original result rather than
+  // re-executing the transition.
   @Post(':id/reserve')
+  @UseInterceptors(IdempotencyInterceptor)
   async reserve(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReserveBookingDto) {
     const booking = await this.bookingService.reserve(id, dto.reason);
     return { data: booking, meta: {} };
   }
 
   @Post(':id/issue-ticket')
+  @UseInterceptors(IdempotencyInterceptor)
   async issueTicket(@Param('id', ParseUUIDPipe) id: string, @Body() dto: IssueTicketBookingDto) {
     const booking = await this.bookingService.issueTicket(id, dto.reason);
     return { data: booking, meta: {} };
   }
 
   @Post(':id/cancel')
+  @UseInterceptors(IdempotencyInterceptor)
   async cancel(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CancelBookingDto) {
     const booking = await this.bookingService.cancel(id, dto.reason);
     return { data: booking, meta: {} };

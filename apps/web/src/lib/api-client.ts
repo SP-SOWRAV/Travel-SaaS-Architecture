@@ -49,6 +49,17 @@ function authHeaders(accessToken: string): HeadersInit {
   return { Authorization: `Bearer ${accessToken}` };
 }
 
+// API_RULES §16: an Idempotency-Key header on Workflow Engine actions and Finance
+// mutations, so a retried request (e.g. after a client-side timeout) returns the
+// original result instead of being executed twice. Callers hold the key in a ref that
+// persists across a retry of the same action and only regenerate it once that action
+// has actually succeeded (see src/lib/idempotency-key.ts).
+function idempotentHeaders(accessToken: string, idempotencyKey?: string): HeadersInit {
+  return idempotencyKey
+    ? { ...authHeaders(accessToken), 'Idempotency-Key': idempotencyKey }
+    : authHeaders(accessToken);
+}
+
 export interface LoginResponse {
   accessToken: string;
 }
@@ -492,10 +503,11 @@ export function reserveBooking(
   accessToken: string,
   bookingId: string,
   reason?: string,
+  idempotencyKey?: string,
 ): Promise<BookingAggregateResponse> {
   return request<BookingAggregateResponse>(`/api/v1/bookings/${bookingId}/reserve`, {
     method: 'POST',
-    headers: authHeaders(accessToken),
+    headers: idempotentHeaders(accessToken, idempotencyKey),
     body: JSON.stringify(reason ? { reason } : {}),
   });
 }
@@ -504,10 +516,11 @@ export function issueTicketForBooking(
   accessToken: string,
   bookingId: string,
   reason?: string,
+  idempotencyKey?: string,
 ): Promise<BookingAggregateResponse> {
   return request<BookingAggregateResponse>(`/api/v1/bookings/${bookingId}/issue-ticket`, {
     method: 'POST',
-    headers: authHeaders(accessToken),
+    headers: idempotentHeaders(accessToken, idempotencyKey),
     body: JSON.stringify(reason ? { reason } : {}),
   });
 }
@@ -516,10 +529,11 @@ export function cancelBooking(
   accessToken: string,
   bookingId: string,
   reason: string,
+  idempotencyKey?: string,
 ): Promise<BookingAggregateResponse> {
   return request<BookingAggregateResponse>(`/api/v1/bookings/${bookingId}/cancel`, {
     method: 'POST',
-    headers: authHeaders(accessToken),
+    headers: idempotentHeaders(accessToken, idempotencyKey),
     body: JSON.stringify({ reason }),
   });
 }
@@ -574,10 +588,11 @@ export function generateInvoice(
   accessToken: string,
   bookingId: string,
   reason?: string,
+  idempotencyKey?: string,
 ): Promise<InvoiceResponse> {
   return request<InvoiceResponse>(`/api/v1/bookings/${bookingId}/invoice`, {
     method: 'POST',
-    headers: authHeaders(accessToken),
+    headers: idempotentHeaders(accessToken, idempotencyKey),
     body: JSON.stringify(reason ? { reason } : {}),
   });
 }
@@ -639,10 +654,11 @@ export function recordPayment(
   accessToken: string,
   invoiceId: string,
   data: RecordPaymentInput,
+  idempotencyKey?: string,
 ): Promise<PaymentResponse> {
   return request<PaymentResponse>(`/api/v1/invoices/${invoiceId}/payments`, {
     method: 'POST',
-    headers: authHeaders(accessToken),
+    headers: idempotentHeaders(accessToken, idempotencyKey),
     body: JSON.stringify(data),
   });
 }
@@ -676,10 +692,11 @@ export function processRefund(
   accessToken: string,
   invoiceId: string,
   data: ProcessRefundInput,
+  idempotencyKey?: string,
 ): Promise<RefundResponse> {
   return request<RefundResponse>(`/api/v1/invoices/${invoiceId}/refunds`, {
     method: 'POST',
-    headers: authHeaders(accessToken),
+    headers: idempotentHeaders(accessToken, idempotencyKey),
     body: JSON.stringify(data),
   });
 }

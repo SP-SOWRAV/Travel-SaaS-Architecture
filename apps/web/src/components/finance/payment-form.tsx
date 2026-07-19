@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ApiRequestError, PaymentMethodCode, PaymentResponse, recordPayment } from '../../lib/api-client';
+import { useIdempotencyKey } from '../../lib/idempotency-key';
 
 const PAYMENT_METHODS: { value: PaymentMethodCode; label: string }[] = [
   { value: 'cash', label: 'Cash' },
@@ -26,6 +27,7 @@ export function PaymentForm({ accessToken, invoiceId, remaining, currencyCode, o
   const [reference, setReference] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const idempotencyKey = useIdempotencyKey();
 
   const handleSubmit = async () => {
     const parsedAmount = Number(amount);
@@ -36,11 +38,17 @@ export function PaymentForm({ accessToken, invoiceId, remaining, currencyCode, o
     setError(null);
     setBusy(true);
     try {
-      const payment = await recordPayment(accessToken, invoiceId, {
-        amount: parsedAmount,
-        paymentMethod,
-        reference: reference.trim() || undefined,
-      });
+      const payment = await recordPayment(
+        accessToken,
+        invoiceId,
+        {
+          amount: parsedAmount,
+          paymentMethod,
+          reference: reference.trim() || undefined,
+        },
+        idempotencyKey.getKey(),
+      );
+      idempotencyKey.resetKey();
       onRecorded(payment);
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.apiError.message : 'Failed to record payment');

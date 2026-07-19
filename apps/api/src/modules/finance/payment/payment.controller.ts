@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../core/auth/jwt-auth.guard';
+import { IdempotencyInterceptor } from '../../../core/idempotency/idempotency.interceptor';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { PaymentService } from './payment.service';
 
@@ -8,7 +9,9 @@ import { PaymentService } from './payment.service';
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 
+  // API_RULES §16: financial mutation — a retried request must never double-charge.
   @Post('invoices/:invoiceId/payments')
+  @UseInterceptors(IdempotencyInterceptor)
   async record(@Param('invoiceId', ParseUUIDPipe) invoiceId: string, @Body() dto: CreatePaymentDto) {
     const payment = await this.paymentService.recordPayment(invoiceId, dto);
     return { data: payment, meta: {} };

@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from '../../../core/auth/jwt-auth.guard';
+import { IdempotencyInterceptor } from '../../../core/idempotency/idempotency.interceptor';
 import { CreateRefundDto } from './dto/create-refund.dto';
 import { RefundService } from './refund.service';
 
@@ -8,7 +9,9 @@ import { RefundService } from './refund.service';
 export class RefundController {
   constructor(private readonly refundService: RefundService) {}
 
+  // API_RULES §16: financial mutation — a retried request must never double-refund.
   @Post('invoices/:invoiceId/refunds')
+  @UseInterceptors(IdempotencyInterceptor)
   async process(@Param('invoiceId', ParseUUIDPipe) invoiceId: string, @Body() dto: CreateRefundDto) {
     const refund = await this.refundService.processRefund(invoiceId, dto);
     return { data: refund, meta: {} };
