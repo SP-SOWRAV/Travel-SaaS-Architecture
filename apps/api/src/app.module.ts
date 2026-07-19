@@ -1,12 +1,16 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from './core/rate-limit/app-throttler.guard';
 import type { SharedTypesPlaceholder } from '@project/shared-types';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CoreModule } from './core/core.module';
 import { validate } from './core/config/env.validation';
 import { TenantContextMiddleware } from './core/tenant/tenant-context.middleware';
+import { TenantContextService } from './core/tenant/tenant-context.service';
+import { buildThrottlerConfig } from './core/rate-limit/rate-limit.config';
 import { ActivityLogInterceptor } from './core/activity-log/activity-log.interceptor';
 import { ActivityLogService } from './core/activity-log/activity-log.service';
 import { HttpExceptionFilter } from './core/filters/http-exception.filter';
@@ -32,6 +36,11 @@ export type _SharedTypesImportCheck = SharedTypesPlaceholder;
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate }),
     CoreModule,
+    ThrottlerModule.forRootAsync({
+      imports: [CoreModule],
+      inject: [TenantContextService],
+      useFactory: buildThrottlerConfig,
+    }),
     AuthModule,
     SettingsModule,
     BranchModule,
@@ -53,6 +62,7 @@ export type _SharedTypesImportCheck = SharedTypesPlaceholder;
     ActivityLogService,
     { provide: APP_INTERCEPTOR, useClass: ActivityLogInterceptor },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
   ],
 })
 export class AppModule implements NestModule {
