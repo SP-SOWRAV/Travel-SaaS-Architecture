@@ -7,6 +7,7 @@ export function AgentPerformanceReport({ report }: { report: AgentPerformanceRes
     <div className="rounded-lg border border-neutral-200 bg-white p-4">
       <h2 className="mb-3 text-lg font-semibold text-neutral-900">Agent Performance</h2>
 
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -34,6 +35,7 @@ export function AgentPerformanceReport({ report }: { report: AgentPerformanceRes
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

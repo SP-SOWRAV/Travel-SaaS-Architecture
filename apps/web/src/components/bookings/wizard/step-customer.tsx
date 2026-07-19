@@ -69,36 +69,38 @@ export function StepCustomer({ accessToken, customerId, branchId, onChange, onNe
           className="mb-3 w-full max-w-sm rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
         />
 
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-neutral-200 text-left text-neutral-500">
-              <th className="py-2 pr-4 font-medium">Name</th>
-              <th className="py-2 pr-4 font-medium">Email</th>
-              <th className="py-2 pr-4 font-medium">Phone</th>
-              <th className="py-2 pr-4 text-right font-medium">Select</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map((customer) => (
-              <tr key={customer.id} className="border-b border-neutral-100">
-                <td className="py-2 pr-4 text-neutral-900">{customer.fullName}</td>
-                <td className="py-2 pr-4 text-neutral-700">{customer.email ?? '—'}</td>
-                <td className="py-2 pr-4 text-neutral-700">{customer.phone ?? '—'}</td>
-                <td className="py-2 pr-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => onChange(customer.id, branchId)}
-                    className={`text-sm font-medium ${
-                      customerId === customer.id ? 'text-green-700' : 'text-blue-600 hover:text-blue-700'
-                    }`}
-                  >
-                    {customerId === customer.id ? 'Selected' : 'Select'}
-                  </button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-neutral-200 text-left text-neutral-500">
+                <th className="py-2 pr-4 font-medium">Name</th>
+                <th className="py-2 pr-4 font-medium">Email</th>
+                <th className="py-2 pr-4 font-medium">Phone</th>
+                <th className="py-2 pr-4 text-right font-medium">Select</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {customers.map((customer) => (
+                <tr key={customer.id} className="border-b border-neutral-100">
+                  <td className="py-2 pr-4 text-neutral-900">{customer.fullName}</td>
+                  <td className="py-2 pr-4 text-neutral-700">{customer.email ?? '—'}</td>
+                  <td className="py-2 pr-4 text-neutral-700">{customer.phone ?? '—'}</td>
+                  <td className="py-2 pr-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => onChange(customer.id, branchId)}
+                      className={`text-sm font-medium ${
+                        customerId === customer.id ? 'text-green-700' : 'text-blue-600 hover:text-blue-700'
+                      }`}
+                    >
+                      {customerId === customer.id ? 'Selected' : 'Select'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="mt-6 flex justify-end">

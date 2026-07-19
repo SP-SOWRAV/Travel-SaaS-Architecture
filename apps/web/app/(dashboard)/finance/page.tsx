@@ -86,6 +86,7 @@ export default function FinancePage() {
         )}
 
         <div className="rounded-lg border border-neutral-200 bg-white p-4">
+          <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -124,6 +125,7 @@ export default function FinancePage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </main>

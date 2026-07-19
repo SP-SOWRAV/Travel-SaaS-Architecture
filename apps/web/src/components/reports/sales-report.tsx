@@ -29,6 +29,7 @@ export function SalesReport({ report }: { report: SalesReportResponse }) {
         </div>
       </dl>
 
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -56,6 +57,7 @@ export function SalesReport({ report }: { report: SalesReportResponse }) {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

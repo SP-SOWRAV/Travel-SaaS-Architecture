@@ -50,6 +50,7 @@ export function AirportPicker({ accessToken, onSelect }: AirportPickerProps) {
         </p>
       )}
 
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -87,6 +88,7 @@ export function AirportPicker({ accessToken, onSelect }: AirportPickerProps) {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

@@ -29,6 +29,7 @@ export function StepPassengers({ passengers, onChange, onNext, onBack }: StepPas
 
   return (
     <div>
+      <div className="overflow-x-auto">
       <table className="mb-4 w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -64,6 +65,7 @@ export function StepPassengers({ passengers, onChange, onNext, onBack }: StepPas
           )}
         </tbody>
       </table>
+      </div>
 
       <form onSubmit={addPassenger} className="flex flex-wrap items-end gap-3 rounded-md border border-neutral-200 p-4">
         <div>

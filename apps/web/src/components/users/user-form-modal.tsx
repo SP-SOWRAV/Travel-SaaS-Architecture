@@ -9,6 +9,8 @@ import {
   UpdateUserInput,
   UserResponse,
 } from '../../lib/api-client';
+import { extractFieldErrors } from '../../lib/field-errors';
+import { FieldError } from '../ui/field-error';
 
 const STAFF_ROLES: StaffRole[] = ['agency_admin', 'branch_manager', 'agent'];
 
@@ -28,6 +30,7 @@ export function UserFormModal({ user, branches, onClose, onSubmit }: UserFormMod
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Non-destructive modal: Escape closes it (UI_GUIDELINES §15).
   useEffect(() => {
@@ -43,6 +46,7 @@ export function UserFormModal({ user, branches, onClose, onSubmit }: UserFormMod
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
     setSaving(true);
     try {
       if (user) {
@@ -67,6 +71,7 @@ export function UserFormModal({ user, branches, onClose, onSubmit }: UserFormMod
       onClose();
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.apiError.message : 'Failed to save user');
+      setFieldErrors(extractFieldErrors(err));
     } finally {
       setSaving(false);
     }
@@ -107,6 +112,7 @@ export function UserFormModal({ user, branches, onClose, onSubmit }: UserFormMod
               onChange={(event) => setFullName(event.target.value)}
               className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
             />
+            <FieldError message={fieldErrors.fullName} />
           </div>
 
           {!user && (
@@ -123,6 +129,7 @@ export function UserFormModal({ user, branches, onClose, onSubmit }: UserFormMod
                   onChange={(event) => setEmail(event.target.value)}
                   className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
                 />
+                <FieldError message={fieldErrors.email} />
               </div>
 
               <div>
@@ -141,6 +148,7 @@ export function UserFormModal({ user, branches, onClose, onSubmit }: UserFormMod
                   onChange={(event) => setPassword(event.target.value)}
                   className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
                 />
+                <FieldError message={fieldErrors.password} />
               </div>
             </>
           )}
@@ -195,6 +203,7 @@ export function UserFormModal({ user, branches, onClose, onSubmit }: UserFormMod
               onChange={(event) => setPhone(event.target.value)}
               className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
             />
+            <FieldError message={fieldErrors.phone} />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

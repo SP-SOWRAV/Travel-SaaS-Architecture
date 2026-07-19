@@ -51,6 +51,7 @@ export function AirlinePicker({ accessToken, onSelect }: AirlinePickerProps) {
         </p>
       )}
 
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -88,6 +89,7 @@ export function AirlinePicker({ accessToken, onSelect }: AirlinePickerProps) {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

@@ -7,6 +7,8 @@ import {
   CreateBranchInput,
   UpdateBranchInput,
 } from '../../lib/api-client';
+import { extractFieldErrors } from '../../lib/field-errors';
+import { FieldError } from '../ui/field-error';
 
 interface BranchFormModalProps {
   branch: BranchResponse | null; // null = create mode
@@ -22,6 +24,7 @@ export function BranchFormModal({ branch, onClose, onSubmit }: BranchFormModalPr
   const [email, setEmail] = useState(branch?.email ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Non-destructive modal: Escape closes it (UI_GUIDELINES §15).
   useEffect(() => {
@@ -37,6 +40,7 @@ export function BranchFormModal({ branch, onClose, onSubmit }: BranchFormModalPr
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
     setSaving(true);
     try {
       const payload: Record<string, string> = { name, code };
@@ -53,6 +57,7 @@ export function BranchFormModal({ branch, onClose, onSubmit }: BranchFormModalPr
       onClose();
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.apiError.message : 'Failed to save branch');
+      setFieldErrors(extractFieldErrors(err));
     } finally {
       setSaving(false);
     }
@@ -93,6 +98,7 @@ export function BranchFormModal({ branch, onClose, onSubmit }: BranchFormModalPr
               onChange={(event) => setName(event.target.value)}
               className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
             />
+            <FieldError message={fieldErrors.name} />
           </div>
 
           <div>
@@ -107,6 +113,7 @@ export function BranchFormModal({ branch, onClose, onSubmit }: BranchFormModalPr
               onChange={(event) => setCode(event.target.value.toUpperCase())}
               className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm uppercase focus:border-blue-600 focus:outline-none"
             />
+            <FieldError message={fieldErrors.code} />
           </div>
 
           <div>
@@ -120,6 +127,7 @@ export function BranchFormModal({ branch, onClose, onSubmit }: BranchFormModalPr
               onChange={(event) => setAddressLine1(event.target.value)}
               className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
             />
+            <FieldError message={fieldErrors.addressLine1} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -134,6 +142,7 @@ export function BranchFormModal({ branch, onClose, onSubmit }: BranchFormModalPr
                 onChange={(event) => setPhone(event.target.value)}
                 className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
               />
+              <FieldError message={fieldErrors.phone} />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-neutral-700" htmlFor="branch-email">
@@ -146,6 +155,7 @@ export function BranchFormModal({ branch, onClose, onSubmit }: BranchFormModalPr
                 onChange={(event) => setEmail(event.target.value)}
                 className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
               />
+              <FieldError message={fieldErrors.email} />
             </div>
           </div>
 

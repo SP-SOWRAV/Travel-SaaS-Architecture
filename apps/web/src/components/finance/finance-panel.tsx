@@ -137,6 +137,7 @@ export function FinancePanel({ accessToken, bookingId, bookingStatus, currencyCo
           </dl>
 
           {invoice.lines && invoice.lines.length > 0 && (
+            <div className="overflow-x-auto">
             <table className="mb-4 w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -153,10 +154,12 @@ export function FinancePanel({ accessToken, bookingId, bookingStatus, currencyCo
                 ))}
               </tbody>
             </table>
+            </div>
           )}
 
           <h3 className="mb-2 text-sm font-semibold text-neutral-900">Payments ({payments.length})</h3>
           {payments.length > 0 ? (
+            <div className="overflow-x-auto">
             <table className="mb-4 w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -179,6 +182,7 @@ export function FinancePanel({ accessToken, bookingId, bookingStatus, currencyCo
                 ))}
               </tbody>
             </table>
+            </div>
           ) : (
             <p className="mb-4 text-sm text-neutral-600">No payments recorded yet.</p>
           )}
@@ -186,6 +190,7 @@ export function FinancePanel({ accessToken, bookingId, bookingStatus, currencyCo
           {refunds.length > 0 && (
             <>
               <h3 className="mb-2 text-sm font-semibold text-neutral-900">Refunds ({refunds.length})</h3>
+              <div className="overflow-x-auto">
               <table className="mb-4 w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -204,6 +209,7 @@ export function FinancePanel({ accessToken, bookingId, bookingStatus, currencyCo
                   ))}
                 </tbody>
               </table>
+              </div>
             </>
           )}
 

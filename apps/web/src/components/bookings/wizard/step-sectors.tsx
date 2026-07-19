@@ -64,6 +64,7 @@ export function StepSectors({ accessToken, sectors, onChange, onNext, onBack }: 
 
   return (
     <div>
+      <div className="overflow-x-auto">
       <table className="mb-4 w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -101,6 +102,7 @@ export function StepSectors({ accessToken, sectors, onChange, onNext, onBack }: 
           )}
         </tbody>
       </table>
+      </div>
 
       <form onSubmit={addSector} className="space-y-3 rounded-md border border-neutral-200 p-4">
         <div className="flex flex-wrap gap-3">

@@ -125,6 +125,7 @@ export default function BookingDetailPage() {
               <h2 className="mb-3 text-lg font-semibold text-neutral-900">
                 Passengers ({booking.passengers.length})
               </h2>
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -143,12 +144,14 @@ export default function BookingDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
 
             <div className="mb-6 rounded-lg border border-neutral-200 bg-white p-4">
               <h2 className="mb-3 text-lg font-semibold text-neutral-900">
                 Sectors ({booking.sectors.length})
               </h2>
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -173,12 +176,14 @@ export default function BookingDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
 
             <div className="rounded-lg border border-neutral-200 bg-white p-4">
               <h2 className="mb-3 text-lg font-semibold text-neutral-900">
                 Fares & Taxes ({booking.fares.length})
               </h2>
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -199,6 +204,7 @@ export default function BookingDetailPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {accessToken && (

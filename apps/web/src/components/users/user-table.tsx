@@ -20,6 +20,7 @@ export function UserTable({ users, branches, onEdit, onToggleActive, loading }: 
     branches.find((branch) => branch.id === branchId)?.name ?? '—';
 
   return (
+    <div className="overflow-x-auto">
     <table className="w-full border-collapse text-sm">
       <thead>
         <tr className="border-b border-neutral-200 text-left text-neutral-500">
@@ -70,5 +71,6 @@ export function UserTable({ users, branches, onEdit, onToggleActive, loading }: 
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

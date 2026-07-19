@@ -7,6 +7,8 @@ import {
   CustomerResponse,
   UpdateCustomerInput,
 } from '../../lib/api-client';
+import { extractFieldErrors } from '../../lib/field-errors';
+import { FieldError } from '../ui/field-error';
 
 interface CustomerFormModalProps {
   customer: CustomerResponse | null; // null = create mode
@@ -23,6 +25,7 @@ export function CustomerFormModal({ customer, onClose, onSubmit }: CustomerFormM
   const [addressLine1, setAddressLine1] = useState(customer?.addressLine1 ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Non-destructive modal: Escape closes it (UI_GUIDELINES §15).
   useEffect(() => {
@@ -38,6 +41,7 @@ export function CustomerFormModal({ customer, onClose, onSubmit }: CustomerFormM
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
     setSaving(true);
     try {
       const payload: Record<string, string> = { fullName };
@@ -60,6 +64,7 @@ export function CustomerFormModal({ customer, onClose, onSubmit }: CustomerFormM
       onClose();
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.apiError.message : 'Failed to save customer');
+      setFieldErrors(extractFieldErrors(err));
     } finally {
       setSaving(false);
     }
@@ -103,6 +108,7 @@ export function CustomerFormModal({ customer, onClose, onSubmit }: CustomerFormM
               onChange={(event) => setFullName(event.target.value)}
               className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
             />
+            <FieldError message={fieldErrors.fullName} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -120,6 +126,7 @@ export function CustomerFormModal({ customer, onClose, onSubmit }: CustomerFormM
                 onChange={(event) => setEmail(event.target.value)}
                 className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
               />
+              <FieldError message={fieldErrors.email} />
             </div>
             <div>
               <label
@@ -135,6 +142,7 @@ export function CustomerFormModal({ customer, onClose, onSubmit }: CustomerFormM
                 onChange={(event) => setPhone(event.target.value)}
                 className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
               />
+              <FieldError message={fieldErrors.phone} />
             </div>
           </div>
 
@@ -153,6 +161,7 @@ export function CustomerFormModal({ customer, onClose, onSubmit }: CustomerFormM
                 onChange={(event) => setPassportNumber(event.target.value)}
                 className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
               />
+              <FieldError message={fieldErrors.passportNumber} />
             </div>
             <div>
               <label
@@ -168,6 +177,7 @@ export function CustomerFormModal({ customer, onClose, onSubmit }: CustomerFormM
                 onChange={(event) => setDateOfBirth(event.target.value)}
                 className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
               />
+              <FieldError message={fieldErrors.dateOfBirth} />
             </div>
           </div>
 
@@ -185,6 +195,7 @@ export function CustomerFormModal({ customer, onClose, onSubmit }: CustomerFormM
               onChange={(event) => setAddressLine1(event.target.value)}
               className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-blue-600 focus:outline-none"
             />
+            <FieldError message={fieldErrors.addressLine1} />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
