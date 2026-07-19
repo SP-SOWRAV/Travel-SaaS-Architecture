@@ -1,8 +1,12 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Booking, Passenger } from '@prisma/client';
+import { Booking, Passenger, Prisma } from '@prisma/client';
 import { BookingRepository } from '../booking/booking.repository';
 import { CreatePassengerDto } from './dto/create-passenger.dto';
 import { UpdatePassengerDto } from './dto/update-passenger.dto';
+
+function isForeignKeyViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003';
+}
 
 export interface PassengerResponse {
   id: string;
@@ -80,6 +84,15 @@ export class PassengerService {
     if (!existing) {
       throw new NotFoundException('Passenger not found');
     }
-    await this.bookingRepository.deletePassenger(passengerId);
+    try {
+      await this.bookingRepository.deletePassenger(passengerId);
+    } catch (err) {
+      if (isForeignKeyViolation(err)) {
+        throw new ConflictException(
+          'Cannot delete a passenger that already has a fare or ticket referencing it',
+        );
+      }
+      throw err;
+    }
   }
 }

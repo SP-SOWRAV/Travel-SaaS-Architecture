@@ -13,6 +13,10 @@ function isUniqueViolation(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
 }
 
+function isForeignKeyViolation(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003';
+}
+
 @Injectable()
 export class FareService {
   constructor(private readonly bookingRepository: BookingRepository) {}
@@ -78,6 +82,13 @@ export class FareService {
     if (!existing) {
       throw new NotFoundException('Fare not found');
     }
-    await this.bookingRepository.deleteFare(fareId);
+    try {
+      await this.bookingRepository.deleteFare(fareId);
+    } catch (err) {
+      if (isForeignKeyViolation(err)) {
+        throw new ConflictException('Cannot delete a fare that already has taxes referencing it');
+      }
+      throw err;
+    }
   }
 }

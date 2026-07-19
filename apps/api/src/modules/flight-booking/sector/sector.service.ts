@@ -79,6 +79,13 @@ export class SectorService {
     if (!existing) {
       throw new NotFoundException('Sector not found');
     }
-    await this.bookingRepository.deleteSector(sectorId);
+    try {
+      await this.bookingRepository.deleteSector(sectorId);
+    } catch (err) {
+      if (isForeignKeyViolation(err)) {
+        throw new ConflictException('Cannot delete a sector that already has a fare referencing it');
+      }
+      throw err;
+    }
   }
 }
