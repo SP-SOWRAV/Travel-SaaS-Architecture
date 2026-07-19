@@ -49,6 +49,21 @@ export class PaymentRepository extends BaseRepository<Prisma.PaymentDelegate> {
         },
       });
 
+      // DATABASE.md §9/§3.20: every payment produces exactly one Transaction row, written
+      // inside the same DB transaction as the Payment it logs — signed positive for a
+      // payment (negative is reserved for Refund, RefundRepository.createWithTransaction).
+      await tx.transaction.create({
+        data: {
+          tenantId,
+          type: 'payment',
+          referenceTable: 'payments',
+          referenceId: payment.id,
+          amount: input.amount,
+          currencyCode: input.currencyCode,
+          createdBy: input.receivedBy,
+        },
+      });
+
       return payment.id;
     });
 

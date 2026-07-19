@@ -31,6 +31,8 @@ model Agency {
   invoices  Invoice[]
   payments  Payment[]
   receipts  Receipt[]
+  refunds   Refund[]
+  transactions Transaction[]
 
   @@map("agencies")
 }
@@ -65,6 +67,8 @@ model User {
   remarksCreated  Remark[]
   workflowTransitionsAsActor WorkflowTransition[]
   paymentsReceived Payment[]
+  refundsProcessed Refund[]
+  transactionsCreated Transaction[]
 
   @@index([tenantId])
   @@index([tenantId, role])
@@ -474,6 +478,7 @@ model Invoice {
   booking Booking      @relation(fields: [bookingId], references: [id])
   lines  InvoiceLine[]
   payments Payment[]
+  refunds  Refund[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
@@ -525,6 +530,7 @@ model Payment {
   invoice Invoice  @relation(fields: [invoiceId], references: [id])
   receiver User    @relation(fields: [receivedBy], references: [id])
   receipt Receipt?
+  refunds Refund[]
 
   @@index([tenantId])
   @@index([invoiceId])
@@ -546,4 +552,63 @@ model Receipt {
   @@unique([tenantId, receiptNumber])
   @@index([tenantId])
   @@map("receipts")
+}
+
+// Money returned against an invoice/payment (DATABASE.md §3.19); drives the Refunded
+// transition, permitted only from Paid/Completed per MASTER.md §5. reason is required
+// (matches WorkflowEngineService's own rule that Refunded always needs a reason).
+model Refund {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  invoiceId    String   @map("invoice_id") @db.Uuid
+  paymentId    String?  @map("payment_id") @db.Uuid
+  amount       Decimal  @db.Decimal(12, 2)
+  currencyCode String   @map("currency_code") @db.Char(3)
+  reason       String   @db.Text
+  processedBy  String   @map("processed_by") @db.Uuid
+  refundedAt   DateTime @default(now()) @map("refunded_at") @db.Timestamptz
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  agency    Agency   @relation(fields: [tenantId], references: [id])
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+  processor User     @relation(fields: [processedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@map("refunds")
+}
+
+// The MVP's unified, append-only financial log (MASTER.md §7, DATABASE.md §3.20/§9) — the
+// deliberate stand-in for the deferred double-entry Ledger. Every payment and refund
+// produces exactly one Transaction row. reference_id/reference_table is intentionally not
+// a DB-level FK since it polymorphically points at either payments or refunds (DATABASE.md
+// §9) — integrity here is an application-layer responsibility enforced at the point each
+// row is written, always inside the same DB transaction as its Payment/Refund row.
+enum TransactionType {
+  payment
+  refund
+  adjustment
+
+  @@map("transaction_type")
+}
+
+model Transaction {
+  id             String          @id @default(uuid()) @db.Uuid
+  tenantId       String          @map("tenant_id") @db.Uuid
+  type           TransactionType
+  referenceTable String          @map("reference_table") @db.VarChar(30)
+  referenceId    String          @map("reference_id") @db.Uuid
+  amount         Decimal         @db.Decimal(12, 2)
+  currencyCode   String          @map("currency_code") @db.Char(3)
+  createdBy      String?         @map("created_by") @db.Uuid
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  agency  Agency @relation(fields: [tenantId], references: [id])
+  creator User?  @relation(fields: [createdBy], references: [id])
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([referenceTable, referenceId])
+  @@map("transactions")
 }
