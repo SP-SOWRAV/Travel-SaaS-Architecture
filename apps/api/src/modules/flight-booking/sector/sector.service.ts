@@ -13,6 +13,42 @@ function isForeignKeyViolation(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003';
 }
 
+export interface SectorResponse {
+  id: string;
+  bookingId: string;
+  airlineId: string;
+  originAirportId: string;
+  destinationAirportId: string;
+  flightNumber: string;
+  cabinClass: string;
+  departureAt: Date;
+  arrivalAt: Date;
+  sequenceNumber: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// HIGH-9 hardening: an explicit allow-list, not the raw Prisma row — Sector carries no
+// tenant_id of its own today, but returning the ORM row directly means any future column
+// added to this table leaks onto the wire with zero code change to catch it (the same
+// defense-in-depth already applied to Payment/Refund/Booking's response shaping).
+function toSectorResponse(sector: Sector): SectorResponse {
+  return {
+    id: sector.id,
+    bookingId: sector.bookingId,
+    airlineId: sector.airlineId,
+    originAirportId: sector.originAirportId,
+    destinationAirportId: sector.destinationAirportId,
+    flightNumber: sector.flightNumber,
+    cabinClass: sector.cabinClass,
+    departureAt: sector.departureAt,
+    arrivalAt: sector.arrivalAt,
+    sequenceNumber: sector.sequenceNumber,
+    createdAt: sector.createdAt,
+    updatedAt: sector.updatedAt,
+  };
+}
+
 @Injectable()
 export class SectorService {
   constructor(private readonly bookingRepository: BookingRepository) {}
@@ -33,16 +69,18 @@ export class SectorService {
     }
   }
 
-  async list(bookingId: string): Promise<Sector[]> {
+  async list(bookingId: string): Promise<SectorResponse[]> {
     await this.requireBooking(bookingId);
-    return (await this.bookingRepository.findSectors(bookingId)) as Sector[];
+    const sectors = (await this.bookingRepository.findSectors(bookingId)) as Sector[];
+    return sectors.map(toSectorResponse);
   }
 
-  async create(bookingId: string, dto: CreateSectorDto): Promise<Sector> {
+  async create(bookingId: string, dto: CreateSectorDto): Promise<SectorResponse> {
     const booking = await this.requireBooking(bookingId);
     this.assertDraft(booking);
     try {
-      return (await this.bookingRepository.createSector(bookingId, { ...dto })) as Sector;
+      const sector = (await this.bookingRepository.createSector(bookingId, { ...dto })) as Sector;
+      return toSectorResponse(sector);
     } catch (err) {
       if (isForeignKeyViolation(err)) {
         throw new UnprocessableEntityException(
@@ -53,7 +91,7 @@ export class SectorService {
     }
   }
 
-  async update(bookingId: string, sectorId: string, dto: UpdateSectorDto): Promise<Sector> {
+  async update(bookingId: string, sectorId: string, dto: UpdateSectorDto): Promise<SectorResponse> {
     const booking = await this.requireBooking(bookingId);
     this.assertDraft(booking);
     const existing = await this.bookingRepository.findSectorById(bookingId, sectorId);
@@ -61,7 +99,8 @@ export class SectorService {
       throw new NotFoundException('Sector not found');
     }
     try {
-      return (await this.bookingRepository.updateSector(sectorId, { ...dto })) as Sector;
+      const sector = (await this.bookingRepository.updateSector(sectorId, { ...dto })) as Sector;
+      return toSectorResponse(sector);
     } catch (err) {
       if (isForeignKeyViolation(err)) {
         throw new UnprocessableEntityException(

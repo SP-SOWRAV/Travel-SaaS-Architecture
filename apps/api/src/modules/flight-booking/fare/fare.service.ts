@@ -4,8 +4,9 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { Booking, Fare, Prisma } from '@prisma/client';
+import { Booking, Fare, Prisma, Tax } from '@prisma/client';
 import { BookingRepository } from '../booking/booking.repository';
+import { toTaxResponse, TaxResponse } from '../tax/tax.service';
 import { CreateFareDto } from './dto/create-fare.dto';
 import { UpdateFareDto } from './dto/update-fare.dto';
 
@@ -15,6 +16,36 @@ function isUniqueViolation(err: unknown): boolean {
 
 function isForeignKeyViolation(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003';
+}
+
+type FareWithTaxes = Fare & { taxes: Tax[] };
+
+export interface FareResponse {
+  id: string;
+  bookingId: string;
+  passengerId: string;
+  sectorId: string;
+  baseAmount: Fare['baseAmount'];
+  currencyCode: string;
+  createdAt: Date;
+  updatedAt: Date;
+  taxes: TaxResponse[];
+}
+
+// HIGH-9 hardening: an explicit allow-list, not the raw Prisma row (same rationale as
+// Sector/Tax/Ticket/Remark's own response mappers).
+function toFareResponse(fare: FareWithTaxes): FareResponse {
+  return {
+    id: fare.id,
+    bookingId: fare.bookingId,
+    passengerId: fare.passengerId,
+    sectorId: fare.sectorId,
+    baseAmount: fare.baseAmount,
+    currencyCode: fare.currencyCode,
+    createdAt: fare.createdAt,
+    updatedAt: fare.updatedAt,
+    taxes: fare.taxes.map(toTaxResponse),
+  };
 }
 
 @Injectable()
@@ -29,12 +60,13 @@ export class FareService {
     return booking;
   }
 
-  async list(bookingId: string): Promise<Fare[]> {
+  async list(bookingId: string): Promise<FareResponse[]> {
     await this.requireBooking(bookingId);
-    return (await this.bookingRepository.findFares(bookingId)) as Fare[];
+    const fares = (await this.bookingRepository.findFares(bookingId)) as FareWithTaxes[];
+    return fares.map(toFareResponse);
   }
 
-  async create(bookingId: string, dto: CreateFareDto): Promise<Fare> {
+  async create(bookingId: string, dto: CreateFareDto): Promise<FareResponse> {
     const booking = await this.requireBooking(bookingId);
 
     // API_RULES §5: referenced IDs are validated as belonging to this booking before use —
@@ -53,12 +85,13 @@ export class FareService {
     try {
       // currencyCode always mirrors the booking's currency (DATABASE.md §3.10 "from
       // booking") — never client-supplied, consistent with API_RULES §19.
-      return (await this.bookingRepository.createFare(bookingId, {
+      const fare = (await this.bookingRepository.createFare(bookingId, {
         passengerId: dto.passengerId,
         sectorId: dto.sectorId,
         baseAmount: dto.baseAmount,
         currencyCode: booking.currencyCode,
-      })) as Fare;
+      })) as FareWithTaxes;
+      return toFareResponse(fare);
     } catch (err) {
       if (isUniqueViolation(err)) {
         throw new ConflictException('A fare already exists for this passenger and sector');
@@ -67,13 +100,14 @@ export class FareService {
     }
   }
 
-  async update(bookingId: string, fareId: string, dto: UpdateFareDto): Promise<Fare> {
+  async update(bookingId: string, fareId: string, dto: UpdateFareDto): Promise<FareResponse> {
     await this.requireBooking(bookingId);
     const existing = await this.bookingRepository.findFareById(bookingId, fareId);
     if (!existing) {
       throw new NotFoundException('Fare not found');
     }
-    return (await this.bookingRepository.updateFare(fareId, { ...dto })) as Fare;
+    const fare = (await this.bookingRepository.updateFare(fareId, { ...dto })) as FareWithTaxes;
+    return toFareResponse(fare);
   }
 
   async remove(bookingId: string, fareId: string): Promise<void> {

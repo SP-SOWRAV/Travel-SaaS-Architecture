@@ -3,6 +3,29 @@ import { Tax } from '@prisma/client';
 import { BookingRepository } from '../booking/booking.repository';
 import { CreateTaxDto } from './dto/create-tax.dto';
 
+export interface TaxResponse {
+  id: string;
+  fareId: string;
+  taxCode: string;
+  description: string | null;
+  amount: Tax['amount'];
+  createdAt: Date;
+}
+
+// HIGH-9 hardening: an explicit allow-list, not the raw Prisma row (same rationale as
+// Sector/Ticket/Remark's own response mappers) — Tax carries no tenant_id of its own today,
+// but this guards against a future column leaking onto the wire unnoticed.
+export function toTaxResponse(tax: Tax): TaxResponse {
+  return {
+    id: tax.id,
+    fareId: tax.fareId,
+    taxCode: tax.taxCode,
+    description: tax.description,
+    amount: tax.amount,
+    createdAt: tax.createdAt,
+  };
+}
+
 @Injectable()
 export class TaxService {
   constructor(private readonly bookingRepository: BookingRepository) {}
@@ -19,14 +42,16 @@ export class TaxService {
     return fare;
   }
 
-  async list(bookingId: string, fareId: string): Promise<Tax[]> {
+  async list(bookingId: string, fareId: string): Promise<TaxResponse[]> {
     await this.requireFare(bookingId, fareId);
-    return (await this.bookingRepository.findTaxes(fareId)) as Tax[];
+    const taxes = (await this.bookingRepository.findTaxes(fareId)) as Tax[];
+    return taxes.map(toTaxResponse);
   }
 
-  async create(bookingId: string, fareId: string, dto: CreateTaxDto): Promise<Tax> {
+  async create(bookingId: string, fareId: string, dto: CreateTaxDto): Promise<TaxResponse> {
     await this.requireFare(bookingId, fareId);
-    return (await this.bookingRepository.createTax(fareId, { ...dto })) as Tax;
+    const tax = (await this.bookingRepository.createTax(fareId, { ...dto })) as Tax;
+    return toTaxResponse(tax);
   }
 
   async remove(bookingId: string, fareId: string, taxId: string): Promise<void> {
