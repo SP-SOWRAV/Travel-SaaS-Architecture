@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ActivityLogResponse, listActivityLog } from '../../../src/lib/api-client';
 import { useAuth } from '../../../src/lib/auth-context';
+import { TableSkeleton } from '../../../src/components/ui/skeleton';
 
 // Read-only Activity Log list (TASKS.md T49) — reuses the standard table pattern
 // (UI_GUIDELINES §12); rows are written automatically by the global
@@ -15,6 +16,7 @@ export default function ActivityLogPage() {
   const [entityType, setEntityType] = useState('');
   const [action, setAction] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isInitializing && !isAuthenticated) {
@@ -26,9 +28,11 @@ export default function ActivityLogPage() {
     if (!accessToken) {
       return;
     }
+    setLoading(true);
     listActivityLog(accessToken, { entityType: entityType || undefined, action: action || undefined })
       .then(setLogs)
-      .catch(() => setLoadError('Failed to load activity log'));
+      .catch(() => setLoadError('Failed to load activity log'))
+      .finally(() => setLoading(false));
   }, [accessToken, entityType, action]);
 
   useEffect(() => {
@@ -81,7 +85,8 @@ export default function ActivityLogPage() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => (
+              {loading && <TableSkeleton rows={5} columns={5} />}
+              {!loading && logs.map((log) => (
                 <tr key={log.id} className="border-b border-neutral-100">
                   <td className="py-2 pr-4 font-mono text-neutral-900">{log.action}</td>
                   <td className="py-2 pr-4 text-neutral-700">{log.entityType}</td>
@@ -90,7 +95,7 @@ export default function ActivityLogPage() {
                   <td className="py-2 pr-4 text-neutral-700">{new Date(log.createdAt).toLocaleString()}</td>
                 </tr>
               ))}
-              {logs.length === 0 && (
+              {!loading && logs.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-neutral-600">
                     No activity recorded yet.

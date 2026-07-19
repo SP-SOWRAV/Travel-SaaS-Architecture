@@ -22,6 +22,7 @@ export default function CustomersPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<CustomerResponse | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isInitializing && !isAuthenticated) {
@@ -34,9 +35,11 @@ export default function CustomersPage() {
       if (!accessToken) {
         return;
       }
+      setLoading(true);
       listCustomers(accessToken, q || undefined)
         .then(setCustomers)
-        .catch(() => setLoadError('Failed to load customers'));
+        .catch(() => setLoadError('Failed to load customers'))
+        .finally(() => setLoading(false));
     },
     [accessToken],
   );
@@ -118,7 +121,7 @@ export default function CustomersPage() {
         )}
 
         <div className="rounded-lg border border-neutral-200 bg-white p-4">
-          <CustomerTable customers={customers} onEdit={handleEdit} />
+          <CustomerTable customers={customers} onEdit={handleEdit} loading={loading} />
         </div>
       </div>
 

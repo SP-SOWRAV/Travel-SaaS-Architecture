@@ -1,15 +1,17 @@
 'use client';
 
 import { BranchResponse } from '../../lib/api-client';
+import { TableSkeleton } from '../ui/skeleton';
 
 interface BranchTableProps {
   branches: BranchResponse[];
   onEdit: (branch: BranchResponse) => void;
   onDelete: (branch: BranchResponse) => void;
+  loading?: boolean;
 }
 
-export function BranchTable({ branches, onEdit, onDelete }: BranchTableProps) {
-  if (branches.length === 0) {
+export function BranchTable({ branches, onEdit, onDelete, loading }: BranchTableProps) {
+  if (!loading && branches.length === 0) {
     return <p className="py-8 text-center text-sm text-neutral-600">No branches yet.</p>;
   }
 
@@ -26,7 +28,8 @@ export function BranchTable({ branches, onEdit, onDelete }: BranchTableProps) {
         </tr>
       </thead>
       <tbody>
-        {branches.map((branch) => (
+        {loading && <TableSkeleton rows={5} columns={6} />}
+        {!loading && branches.map((branch) => (
           <tr key={branch.id} className="border-b border-neutral-100">
             <td className="py-2 pr-4 text-neutral-900">{branch.name}</td>
             <td className="py-2 pr-4 font-mono text-neutral-700">{branch.code}</td>

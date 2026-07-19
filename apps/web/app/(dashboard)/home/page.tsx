@@ -6,6 +6,7 @@ import { ApiRequestError, DashboardSummaryResponse, getDashboardSummary } from '
 import { useAuth } from '../../../src/lib/auth-context';
 import { KpiCard } from '../../../src/components/dashboard/kpi-card';
 import { RecentActivity } from '../../../src/components/dashboard/recent-activity';
+import { CardSkeleton } from '../../../src/components/ui/skeleton';
 
 // The real Dashboard (TASKS.md T48) — replaces the T13 placeholder at this same route.
 // The login flow (T13) already sends every user to /home, so the Dashboard lives here
@@ -69,7 +70,14 @@ export default function DashboardPage() {
           </>
         )}
 
-        {!summary && !loadError && <p className="text-sm text-neutral-600">Loading…</p>}
+        {!summary && !loadError && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+        )}
       </div>
     </main>
   );

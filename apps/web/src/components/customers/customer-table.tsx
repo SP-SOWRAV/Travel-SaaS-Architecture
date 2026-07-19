@@ -1,14 +1,16 @@
 'use client';
 
 import { CustomerResponse } from '../../lib/api-client';
+import { TableSkeleton } from '../ui/skeleton';
 
 interface CustomerTableProps {
   customers: CustomerResponse[];
   onEdit: (customer: CustomerResponse) => void;
+  loading?: boolean;
 }
 
-export function CustomerTable({ customers, onEdit }: CustomerTableProps) {
-  if (customers.length === 0) {
+export function CustomerTable({ customers, onEdit, loading }: CustomerTableProps) {
+  if (!loading && customers.length === 0) {
     return <p className="py-8 text-center text-sm text-neutral-600">No customers found.</p>;
   }
 
@@ -24,7 +26,8 @@ export function CustomerTable({ customers, onEdit }: CustomerTableProps) {
         </tr>
       </thead>
       <tbody>
-        {customers.map((customer) => (
+        {loading && <TableSkeleton rows={5} columns={5} />}
+        {!loading && customers.map((customer) => (
           <tr key={customer.id} className="border-b border-neutral-100">
             <td className="py-2 pr-4 text-neutral-900">{customer.fullName}</td>
             <td className="py-2 pr-4 text-neutral-700">{customer.email ?? '—'}</td>

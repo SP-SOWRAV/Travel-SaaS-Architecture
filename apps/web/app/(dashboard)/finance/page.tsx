@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { BookingSummaryResponse, InvoiceResponse, listBookings, listInvoices } from '../../../src/lib/api-client';
 import { useAuth } from '../../../src/lib/auth-context';
 import { InvoiceStatusBadge } from '../../../src/components/finance/invoice-status-badge';
+import { TableSkeleton } from '../../../src/components/ui/skeleton';
 
 const STATUS_OPTIONS = ['issued', 'partially_paid', 'paid', 'void'];
 
@@ -19,6 +20,7 @@ export default function FinancePage() {
   const [bookings, setBookings] = useState<BookingSummaryResponse[]>([]);
   const [statusFilter, setStatusFilter] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isInitializing && !isAuthenticated) {
@@ -37,9 +39,11 @@ export default function FinancePage() {
     if (!accessToken) {
       return;
     }
+    setLoading(true);
     listInvoices(accessToken, { status: statusFilter || undefined })
       .then(setInvoices)
-      .catch(() => setLoadError('Failed to load invoices'));
+      .catch(() => setLoadError('Failed to load invoices'))
+      .finally(() => setLoading(false));
   }, [accessToken, statusFilter]);
 
   useEffect(() => {
@@ -93,7 +97,8 @@ export default function FinancePage() {
               </tr>
             </thead>
             <tbody>
-              {invoices.map((invoice) => (
+              {loading && <TableSkeleton rows={5} columns={5} />}
+              {!loading && invoices.map((invoice) => (
                 <tr key={invoice.id} className="border-b border-neutral-100">
                   <td className="py-2 pr-4 font-mono text-neutral-900">{invoice.invoiceNumber}</td>
                   <td className="py-2 pr-4 font-mono text-neutral-700">
@@ -110,7 +115,7 @@ export default function FinancePage() {
                   <td className="py-2 pr-4 text-neutral-700">{new Date(invoice.issuedAt).toLocaleDateString()}</td>
                 </tr>
               ))}
-              {invoices.length === 0 && (
+              {!loading && invoices.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-neutral-600">
                     No invoices found.

@@ -1,16 +1,18 @@
 'use client';
 
 import { BranchResponse, UserResponse } from '../../lib/api-client';
+import { TableSkeleton } from '../ui/skeleton';
 
 interface UserTableProps {
   users: UserResponse[];
   branches: BranchResponse[];
   onEdit: (user: UserResponse) => void;
   onToggleActive: (user: UserResponse) => void;
+  loading?: boolean;
 }
 
-export function UserTable({ users, branches, onEdit, onToggleActive }: UserTableProps) {
-  if (users.length === 0) {
+export function UserTable({ users, branches, onEdit, onToggleActive, loading }: UserTableProps) {
+  if (!loading && users.length === 0) {
     return <p className="py-8 text-center text-sm text-neutral-600">No staff users yet.</p>;
   }
 
@@ -30,7 +32,8 @@ export function UserTable({ users, branches, onEdit, onToggleActive }: UserTable
         </tr>
       </thead>
       <tbody>
-        {users.map((user) => (
+        {loading && <TableSkeleton rows={5} columns={6} />}
+        {!loading && users.map((user) => (
           <tr key={user.id} className="border-b border-neutral-100">
             <td className="py-2 pr-4 text-neutral-900">{user.fullName}</td>
             <td className="py-2 pr-4 text-neutral-700">{user.email}</td>

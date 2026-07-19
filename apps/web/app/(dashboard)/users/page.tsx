@@ -24,6 +24,7 @@ export default function UsersPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<UserResponse | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isInitializing && !isAuthenticated) {
@@ -35,12 +36,14 @@ export default function UsersPage() {
     if (!accessToken) {
       return;
     }
+    setLoading(true);
     Promise.all([listUsers(accessToken), listBranches(accessToken)])
       .then(([userList, branchList]) => {
         setUsers(userList);
         setBranches(branchList);
       })
-      .catch(() => setLoadError('Failed to load staff users'));
+      .catch(() => setLoadError('Failed to load staff users'))
+      .finally(() => setLoading(false));
   }, [accessToken]);
 
   const handleCreate = () => {
@@ -110,6 +113,7 @@ export default function UsersPage() {
             branches={branches}
             onEdit={handleEdit}
             onToggleActive={handleToggleActive}
+            loading={loading}
           />
         </div>
       </div>

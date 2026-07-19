@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { BookingSummaryResponse, BranchResponse, listBookings, listBranches } from '../../../src/lib/api-client';
 import { useAuth } from '../../../src/lib/auth-context';
 import { StatusBadge } from '../../../src/components/bookings/status-badge';
+import { TableSkeleton } from '../../../src/components/ui/skeleton';
 
 const STATUS_OPTIONS = [
   'draft',
@@ -26,6 +27,7 @@ export default function BookingsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isInitializing && !isAuthenticated) {
@@ -44,12 +46,14 @@ export default function BookingsPage() {
     if (!accessToken) {
       return;
     }
+    setLoading(true);
     listBookings(accessToken, {
       status: statusFilter || undefined,
       branchId: branchFilter || undefined,
     })
       .then(setBookings)
-      .catch(() => setLoadError('Failed to load bookings'));
+      .catch(() => setLoadError('Failed to load bookings'))
+      .finally(() => setLoading(false));
   }, [accessToken, statusFilter, branchFilter]);
 
   useEffect(() => {
@@ -121,7 +125,8 @@ export default function BookingsPage() {
               </tr>
             </thead>
             <tbody>
-              {bookings.map((booking) => (
+              {loading && <TableSkeleton rows={5} columns={5} />}
+              {!loading && bookings.map((booking) => (
                 <tr key={booking.id} className="border-b border-neutral-100">
                   <td className="py-2 pr-4 font-mono text-neutral-900">
                     <Link href={`/bookings/${booking.id}`} className="text-blue-600 hover:text-blue-700">
@@ -140,7 +145,7 @@ export default function BookingsPage() {
                   </td>
                 </tr>
               ))}
-              {bookings.length === 0 && (
+              {!loading && bookings.length === 0 && (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-neutral-600">
                     No bookings found.

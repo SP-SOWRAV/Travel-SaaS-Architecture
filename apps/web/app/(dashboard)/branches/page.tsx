@@ -24,6 +24,7 @@ export default function BranchesPage() {
   const [editingBranch, setEditingBranch] = useState<BranchResponse | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [deletingBranch, setDeletingBranch] = useState<BranchResponse | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isInitializing && !isAuthenticated) {
@@ -35,9 +36,11 @@ export default function BranchesPage() {
     if (!accessToken) {
       return;
     }
+    setLoading(true);
     listBranches(accessToken)
       .then(setBranches)
-      .catch(() => setLoadError('Failed to load branches'));
+      .catch(() => setLoadError('Failed to load branches'))
+      .finally(() => setLoading(false));
   }, [accessToken]);
 
   const handleCreate = () => {
@@ -100,7 +103,7 @@ export default function BranchesPage() {
         )}
 
         <div className="rounded-lg border border-neutral-200 bg-white p-4">
-          <BranchTable branches={branches} onEdit={handleEdit} onDelete={setDeletingBranch} />
+          <BranchTable branches={branches} onEdit={handleEdit} onDelete={setDeletingBranch} loading={loading} />
         </div>
       </div>
 

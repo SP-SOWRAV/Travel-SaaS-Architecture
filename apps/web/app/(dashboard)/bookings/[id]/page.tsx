@@ -13,6 +13,7 @@ import { StatusActions } from '../../../../src/components/bookings/status-action
 import { StatusBadge } from '../../../../src/components/bookings/status-badge';
 import { TransitionHistory } from '../../../../src/components/bookings/transition-history';
 import { FinancePanel } from '../../../../src/components/finance/finance-panel';
+import { Skeleton } from '../../../../src/components/ui/skeleton';
 
 export default function BookingDetailPage() {
   const { accessToken, isAuthenticated, isInitializing } = useAuth();
@@ -78,7 +79,19 @@ export default function BookingDetailPage() {
           </p>
         )}
 
-        {!booking && !loadError && <p className="text-sm text-neutral-600">Loading…</p>}
+        {!booking && !loadError && (
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-64" />
+            <div className="rounded-lg border border-neutral-200 bg-white p-4">
+              <Skeleton className="mb-3 h-4 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </div>
+            <div className="rounded-lg border border-neutral-200 bg-white p-4">
+              <Skeleton className="mb-3 h-4 w-32" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          </div>
+        )}
 
         {booking && (
           <>
