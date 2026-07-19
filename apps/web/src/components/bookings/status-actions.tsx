@@ -10,6 +10,7 @@ import {
   reserveBooking,
 } from '../../lib/api-client';
 import { useIdempotencyKey } from '../../lib/idempotency-key';
+import { ConfirmModal } from '../ui/confirm-modal';
 
 interface StatusActionsProps {
   accessToken: string;
@@ -54,22 +55,11 @@ export function StatusActions({ accessToken, booking, onUpdated }: StatusActions
   };
 
   const handleCancel = async () => {
-    if (!cancelReason.trim()) {
-      return;
-    }
-    setError(null);
-    setBusy('cancel');
-    try {
-      const updated = await cancelBooking(accessToken, booking.id, cancelReason, cancelKey.getKey());
-      cancelKey.resetKey();
-      onUpdated(updated);
-      setShowCancelForm(false);
-      setCancelReason('');
-    } catch (err) {
-      setError(err instanceof ApiRequestError ? err.apiError.message : 'Cancel failed');
-    } finally {
-      setBusy(null);
-    }
+    const updated = await cancelBooking(accessToken, booking.id, cancelReason, cancelKey.getKey());
+    cancelKey.resetKey();
+    onUpdated(updated);
+    setShowCancelForm(false);
+    setCancelReason('');
   };
 
   if (!canReserve && !canIssueTicket && !canCancel) {
@@ -119,12 +109,23 @@ export function StatusActions({ accessToken, booking, onUpdated }: StatusActions
         )}
       </div>
 
-      {/* Destructive action (UI_GUIDELINES §15): explicit confirm required, no accidental
-          dismiss, names the specific record being cancelled. */}
+      {/* Destructive action (UI_GUIDELINES §15): shared modal, no backdrop/Escape dismiss,
+          names the specific record being cancelled. */}
       {showCancelForm && (
-        <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-4">
+        <ConfirmModal
+          title={`Cancel booking ${booking.bookingReference}?`}
+          description="This action cannot be undone."
+          confirmLabel="Confirm Cancel"
+          busyLabel="Cancelling…"
+          confirmDisabled={!cancelReason.trim()}
+          onCancel={() => {
+            setShowCancelForm(false);
+            setCancelReason('');
+          }}
+          onConfirm={handleCancel}
+        >
           <label className="mb-1 block text-sm font-medium text-neutral-700" htmlFor="cancel-reason">
-            Reason for cancelling {booking.bookingReference} <span className="text-red-600">*</span>
+            Reason for cancelling <span className="text-red-600">*</span>
           </label>
           <input
             id="cancel-reason"
@@ -132,27 +133,9 @@ export function StatusActions({ accessToken, booking, onUpdated }: StatusActions
             required
             value={cancelReason}
             onChange={(event) => setCancelReason(event.target.value)}
-            className="mb-3 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-red-600 focus:outline-none"
+            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-red-600 focus:outline-none"
           />
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setShowCancelForm(false)}
-              disabled={busy !== null}
-              className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={busy !== null || !cancelReason.trim()}
-              className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-            >
-              {busy === 'cancel' ? 'Cancelling…' : 'Confirm Cancel'}
-            </button>
-          </div>
-        </div>
+        </ConfirmModal>
       )}
     </div>
   );
