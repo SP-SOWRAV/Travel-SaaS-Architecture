@@ -759,3 +759,29 @@ export function getAgentPerformanceReport(
     headers: authHeaders(accessToken),
   });
 }
+
+export interface DashboardRecentBooking {
+  id: string;
+  agencyId: string;
+  bookingReference: string;
+  status: string;
+  totalAmount: string;
+  currencyCode: string;
+  createdAt: string;
+}
+
+export interface DashboardSummaryResponse {
+  periodStart: string;
+  currencyCode: string;
+  bookingsThisPeriod: number;
+  completedThisPeriod: number;
+  revenue: string;
+  outstanding: string;
+  recentBookings: DashboardRecentBooking[];
+}
+
+export function getDashboardSummary(accessToken: string): Promise<DashboardSummaryResponse> {
+  return request<DashboardSummaryResponse>('/api/v1/dashboard/summary', {
+    headers: authHeaders(accessToken),
+  });
+}
