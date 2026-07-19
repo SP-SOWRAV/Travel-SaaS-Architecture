@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
 import type { Response } from 'express';
+import { TenantContextService } from '../tenant/tenant-context.service';
 
 interface ApiErrorBody {
   code: string;
@@ -30,6 +31,8 @@ function isStructuredBody(body: unknown): body is ApiErrorBody {
 // its HTTP status, with zero changes required at any of those existing throw sites.
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  constructor(private readonly tenantContext: TenantContextService) {}
+
   catch(exception: unknown, host: ArgumentsHost): void {
     const response = host.switchToHttp().getResponse<Response>();
 
@@ -51,8 +54,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // Unexpected/unhandled fault — full detail goes to server-side logs only, never to
-    // the client (API_RULES §21).
-    console.error('Unhandled exception', exception);
+    // the client (API_RULES §21). Logged as the same structured shape as
+    // RequestLoggingMiddleware's per-request line (HIGH-10) so it correlates by requestId.
+    const context = this.tenantContext.getContext();
+    console.error(
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: 'error',
+        requestId: response.getHeader('x-request-id') ?? null,
+        tenantId: context.tenantId ?? null,
+        userId: context.userId ?? null,
+        message: exception instanceof Error ? exception.message : 'Unhandled exception',
+        stack: exception instanceof Error ? exception.stack : undefined,
+      }),
+    );
     response.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred', details: null },
     });

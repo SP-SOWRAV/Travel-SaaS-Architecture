@@ -11,6 +11,7 @@ import { validate } from './core/config/env.validation';
 import { TenantContextMiddleware } from './core/tenant/tenant-context.middleware';
 import { TenantContextService } from './core/tenant/tenant-context.service';
 import { buildThrottlerConfig } from './core/rate-limit/rate-limit.config';
+import { RequestLoggingMiddleware } from './core/logging/request-logging.middleware';
 import { ActivityLogInterceptor } from './core/activity-log/activity-log.interceptor';
 import { ActivityLogService } from './core/activity-log/activity-log.service';
 import { HttpExceptionFilter } from './core/filters/http-exception.filter';
@@ -67,6 +68,8 @@ export type _SharedTypesImportCheck = SharedTypesPlaceholder;
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TenantContextMiddleware).forRoutes('*');
+    // Order matters: TenantContextMiddleware opens the AsyncLocalStorage scope that
+    // RequestLoggingMiddleware's res.on('finish') callback reads from (HIGH-10).
+    consumer.apply(TenantContextMiddleware, RequestLoggingMiddleware).forRoutes('*');
   }
 }
