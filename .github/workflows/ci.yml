@@ -26,3 +26,6 @@ jobs:
 
       - run: npm run build:api
       - run: npm run build:web
+
+      - name: Unit tests
+        run: npm run test --workspace=apps/api
